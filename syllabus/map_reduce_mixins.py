@@ -42,11 +42,13 @@ class MapReduceMixin:
     def __accounting_thread(self):
         """Function to run in an accounting thread while a pool is running"""
 
+        self.info("started accounting")
         # Register accounting
         self.accounting_flag = True
         # Start accounting
         while threading.main_thread().is_alive and self.accounting_flag:
             self.accounting()
+        self.info("stopped accounting")
 
     def r_reduce(self, results, reducer, split=2, cores=None):
         """Recursively reduce a list
@@ -72,9 +74,9 @@ class MapReduceMixin:
             args = [
                 results[i:i + split] for i in range(0, len(results), split)]
             p = Pool(processes=cores)
-            results = p.map_async(target=reducer, args=args)
+            results = p.map(reducer, [(arg, rtask) for arg in args])
 
-        rtask.stop('Reduced Map Results')
+        rtask.done('Reduced Map Results')
 
         return results[0]
 
@@ -92,7 +94,7 @@ class MapReduceMixin:
             1
         args : T[]
             List of parameters (arbitrary type)
-        reducer : result[] -> result
+        reducer : [result[], subtask] -> result
             Combines multiple results into a single object.
         recursive : bool
             If True, the reducer is run recursively with multiple processes
@@ -127,7 +129,7 @@ class MapReduceMixin:
         if reducer is not None:
             if recursive:
                 results = self.r_reduce(
-                    results, reducer, split=split, cores=None)
+                    results, reducer, split=split, cores=cores)
             else:
                 results = reducer(results)
 
