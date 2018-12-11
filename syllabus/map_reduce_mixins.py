@@ -76,6 +76,8 @@ class MapReduceMixin:
 
         rtask.stop('Reduced Map Results')
 
+        return results[0]
+
     def pool(
             self, target, args,
             reducer=None, recursive=True, split=2,

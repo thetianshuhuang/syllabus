@@ -83,7 +83,7 @@ class Task(TaskInfoMixin, MapReduceMixin):
     def info(self, msg):
         self.print(self.__header() + str(msg))
 
-    def done(self, desc, *objects):
+    def done(self, desc, *objects, silent=False):
         """Report completion of the task
 
         Parameters
@@ -93,6 +93,8 @@ class Task(TaskInfoMixin, MapReduceMixin):
         *objects : list of arbitrary objects
             The size of the objects in 'objects' is computed and used to
             report the task's memory footprint
+        silent : bool
+            If True, then no messages are printed.
 
         Returns
         -------
@@ -110,9 +112,9 @@ class Task(TaskInfoMixin, MapReduceMixin):
         if self.reporter is not None:
             self.reporter.put(self.metadata())
 
-        self.print(
-            "  | " * self.tier + render(self.__str__(), BR + GREEN, BOLD))
-        pass
+        if not silent:
+            self.print(
+                "  | " * self.tier + render(self.__str__(), BR + GREEN, BOLD))
 
         return self
 
