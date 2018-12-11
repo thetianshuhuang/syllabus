@@ -4,6 +4,7 @@
 import threading
 from multiprocessing import Manager, Pool
 from queue import Empty as EmptyException
+from functools import partial
 
 
 class MapReduceMixin:
@@ -69,12 +70,13 @@ class MapReduceMixin:
         """
 
         rtask = self.subtask('Reduce', desc='Reducing Map Results')
+        target = partial(reducer, task=rtask)
 
         while len(results) > 1:
             args = [
                 results[i:i + split] for i in range(0, len(results), split)]
             p = Pool(processes=cores)
-            results = p.map(reducer, [(arg, rtask) for arg in args])
+            results = p.map(target, args)
 
         rtask.done('Reduced Map Results')
 
@@ -88,13 +90,13 @@ class MapReduceMixin:
 
         Parameters
         ----------
-        target : [T, subtask] -> result
+        target : T, task=subtask -> result
             Function to run on each argument. The argument is passed as a
             tuple with the argument in position 0 and a subtask in position
             1
         args : T[]
             List of parameters (arbitrary type)
-        reducer : [result[], subtask] -> result
+        reducer : result[], task=subtask -> result
             Combines multiple results into a single object.
         recursive : bool
             If True, the reducer is run recursively with multiple processes
@@ -107,20 +109,18 @@ class MapReduceMixin:
             Number of processes to use
         """
 
-        # Build args
-        # [original arg, subtask]
-        args = [
-            [arg, self.subtask(name=name, desc='', is_process=True)]
-            for arg in args
-        ]
-
         # Start accounting thread
         acc = threading.Thread(target=self.__accounting_thread)
         acc.start()
 
         # Run pool
+        # Partial is run so that each copy recieves a new task
         p = Pool(processes=cores)
-        results = p.map(target, args)
+        results = p.map(
+            partial(
+                target,
+                task=self.subtask(name=name, desc='', is_process=True)),
+            args)
 
         # Kill accounting thread
         self.accounting_flag = False

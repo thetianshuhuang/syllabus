@@ -65,10 +65,10 @@ class Task(TaskInfoMixin, MapReduceMixin):
         self.reporter = reporter
 
         if desc != '':
-            self.print("  | " * self.tier + desc)
+            self.print(self.__header(0) + desc)
 
-    def __header(self):
-        return "  | " * (self.tier + 1) + "<" + self.name + "> "
+    def __header(self, rtier=1):
+        return "  | " * (self.tier + rtier) + "<" + self.name + "> "
 
     def print(self, msg):
 

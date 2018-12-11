@@ -127,7 +127,11 @@ class TaskInfoMixin:
         """Get the current runtime"""
         return (time.time() if self.end is None else self.end) - self.start
 
-    def reset(self):
+    def __header(self, rtier=1):
+        # temporary
+        return "  | " * (self.tier + rtier) + "<" + self.name + "> "
+
+    def reset(self, name=None, desc=None):
         """Reset the start time
 
         Returns
@@ -135,6 +139,10 @@ class TaskInfoMixin:
         Task
             self to allow method chaining
         """
+
+        if name is not None and desc is not None:
+            self.print(self.__header(0) + desc)
+
         self.start = time.time()
         return self
 
