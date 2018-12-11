@@ -127,7 +127,7 @@ class Task(TaskInfoMixin, MapReduceMixin):
             tier=self.tier + 1,
             reporter=self.child_reporter,
             is_process=is_process)
-        self.children[new_task.id] = new_task
+        # self.children[new_task.id] = new_task
 
         return new_task
 

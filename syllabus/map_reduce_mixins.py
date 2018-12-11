@@ -36,7 +36,8 @@ class MapReduceMixin:
             update = None
 
         if type(update) == dict:
-            self.children[update["id"]].update(update)
+            # self.children[update["id"]].update(update)
+            pass
         elif type(update) == str:
             self.print(update)
 

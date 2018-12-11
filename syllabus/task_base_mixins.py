@@ -49,7 +49,7 @@ class TaskInfoMixin:
         # Default parameters
         self.size = None
         self.end = None
-        self.children = {}
+        # self.children = {}
 
         # Generated Parameters
         self.start = time.time()
@@ -93,7 +93,7 @@ class TaskInfoMixin:
             'name': self.name,
             'desc': self.desc,
             'size': self.size,
-            'children': [child.metadata() for child in self.children.values()],
+            # 'children': [child.metadata() for child in self.children.values()],
             'tier': self.tier,
             'id': self.id
         }
@@ -117,11 +117,11 @@ class TaskInfoMixin:
         self.id = metadata.get('id')
 
         # Recursively update children
-        for uid in self.children:
-            try:
-                self.children[uid].update(metadata["children"][uid])
-            except KeyError:
-                pass
+        #for uid in self.children:
+        #    try:
+        #        self.children[uid].update(metadata["children"][uid])
+        #    except KeyError:
+        #        pass
 
     def runtime(self):
         """Get the current runtime"""
@@ -156,11 +156,12 @@ class TaskInfoMixin:
             [1] Total number of tasks
         """
 
-        done = 0
-        for child in self.children.values():
-            if child.end is not None:
-                done += 1
-        return (done, len(self.children))
+        #done = 0
+        #for child in self.children.values():
+        #    if child.end is not None:
+        #        done += 1
+        #return (done, len(self.children))
+        return (0, 0)
 
     def json(self):
         """Get a json representation of the task's metadata
