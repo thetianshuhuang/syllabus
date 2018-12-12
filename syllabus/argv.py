@@ -4,6 +4,11 @@
 import sys
 
 
+class ArgException(Exception):
+    """Exception raised when invalid arguments are passed"""
+    pass
+
+
 class Param:
     """Command line parameter
 
@@ -27,11 +32,13 @@ class Param:
             self, name,
             aliases=[], flags={},
             type=str, default=None, desc=None):
+        self.type = type
         self.name = name
         self.aliases = aliases
         self.default = default
-        self.value = None
+        self.value = default
         self.desc = desc
+        self.flags = flags
 
     def process(self, arg):
         """Process a command line argument
@@ -40,13 +47,39 @@ class Param:
         ----------
         arg : str
             Argument to parse; single element of sys.argv[1:]
+
+        Raises
+        ------
+        ArgException
+            Passed value could not be converted to the desired type
         """
         if '=' in arg:
             key, value = arg.split('=')
             if key in (self.aliases + [self.name]):
-                self.value = self.type(value)
+                try:
+                    self.value = self.type(value)
+                except ValueError:
+                    raise ArgException(
+                        "Invalid argument type: passed value " + value +
+                        " could not be converted to " + str(self.type))
         elif arg in self.flags:
             self.value = self.flags[arg]
+
+    def get_desc(self):
+        """Get description
+
+        Returns
+        -------
+        str
+            <description> (default=<default>)
+        """
+
+        return (
+            "{desc} (default={d})"
+            .format(
+                desc='' if self.desc is None else self.desc,
+                d='' if self.default is None else self.default)
+        )
 
 
 class Config:
@@ -62,32 +95,60 @@ class Config:
         self.params = params
 
     def parse(self):
-        """Parse sys.argv"""
+        """Parse sys.argv
+
+        Returns
+        -------
+        Config
+            self to allow for method chaining
+        """
 
         for arg in sys.argv[1:]:
             for param in self.params:
                 param.process(arg)
+        return self
 
     def dict(self):
         """Get dictionary representation"""
 
         return {p.name: p.value for p in self.params}
 
-    def __desc(self):
-        """Get description"""
+    def get(self, key):
+        """Get the value corresponding to a key
 
-        return (
-            "{desc} (default={d})"
-            .format(
-                desc='' if self.desc is None else self.desc,
-                d='' if self.default is None else self.default)
-        )
+        Parameters
+        ----------
+        key : str
+            Target parameter name
+
+        Returns
+        -------
+        arbitrary type or None
+            None if the key is not found
+        """
+        return self.dict().get(key)
+
+    def subdict(self, *keys):
+        """Get sub-dictionary with parameters for the listed values
+
+        Parameters
+        ----------
+        keys : str[]
+            List of desired parameters
+
+        Returns
+        -------
+        dict
+            Dictionary with keys and values corresponding to the provided keys
+        """
+
+        return {p.name: p.value for p in self.params if p.name in keys}
 
     def table(self):
         """Get table representation"""
 
-        return [
-            [p.name, p.value, self.__desc()]
+        return [['Parameter', 'Value', 'Description']] + [
+            [p.name, p.value, p.get_desc()]
             for p in self.params
         ]
 

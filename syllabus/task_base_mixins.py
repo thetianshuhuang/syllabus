@@ -49,7 +49,7 @@ class TaskInfoMixin:
         # Default parameters
         self.size = None
         self.end = None
-        # self.children = {}
+        self.children = {}
 
         # Generated Parameters
         self.start = time.time()
