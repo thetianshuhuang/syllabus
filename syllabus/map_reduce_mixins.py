@@ -72,7 +72,6 @@ class MapReduceMixin:
 
         rtask = self.subtask('Reduce', desc='Reducing Map Results')
         target = partial(reducer, task=rtask)
-
         while len(results) > 1:
             args = [
                 results[i:i + split] for i in range(0, len(results), split)]
