@@ -25,6 +25,8 @@ class Task(TaskInfoMixin, MapReduceMixin):
     reporter : Queue.Queue or None
         Reporter to use when task is completed. Sends a dict containing
         task metadata.
+    started : bool
+        If False, the task is not labeled as started, and is only intialized.
 
     Attributes
     ----------
@@ -58,30 +60,42 @@ class Task(TaskInfoMixin, MapReduceMixin):
 
     def __init__(
             self, name='Task', desc='',
-            tier=0, reporter=None, is_process=False):
+            tier=0, reporter=None, is_process=False, started=True):
 
-        self._info_init(name=name, desc=desc, tier=tier)
+        self._info_init(name=name, desc=desc, tier=tier, started=started)
         self._map_reduce_init(is_process=is_process)
         self.reporter = reporter
 
-        if desc != '':
-            self.print(self.__header(0) + desc)
+        if started:
+            self.about()
 
     def __header(self, rtier=1):
+        """Get process header"""
         return "  | " * (self.tier + rtier) + "<" + self.name + "> "
 
     def print(self, msg):
+        """Print message"""
 
         if not self.is_process:
             print(msg)
         else:
             self.reporter.put(msg)
 
+    def about(self):
+        """Print task information"""
+        self.print(self.__header(0) + self.desc)
+
     def error(self, e):
+        """Print an error"""
         self.print(self.__header() + render(str(e), BR + RED, BOLD))
 
     def info(self, msg):
+        """Show task message"""
         self.print(self.__header() + str(msg))
+
+    def log(self, msg):
+        """Alias for info"""
+        self.info(msg)
 
     def done(self, desc, *objects, silent=False):
         """Report completion of the task
@@ -118,7 +132,9 @@ class Task(TaskInfoMixin, MapReduceMixin):
 
         return self
 
-    def subtask(self, name='Child Task', desc='', is_process=False):
+    def subtask(
+            self, name='Child Task', desc='',
+            is_process=False, started=False):
         """Create a subtask"""
 
         new_task = Task(
@@ -126,7 +142,8 @@ class Task(TaskInfoMixin, MapReduceMixin):
             desc=desc,
             tier=self.tier + 1,
             reporter=self.child_reporter,
-            is_process=is_process)
+            is_process=is_process,
+            started=started)
         self.children[new_task.id] = new_task
 
         return new_task
@@ -143,10 +160,9 @@ class Task(TaskInfoMixin, MapReduceMixin):
 
         info = ["{t:.2f}s".format(t=self.runtime())]
 
-        status = self.status()
-
-        if status[1] > 0:
-            info.append("{p:.1f}%".format(p=status[0] / status[1] * 100))
+        # status = self.status()
+        # if status[1] > 0:
+        #    info.append("{p:.1f}%".format(p=status[0] / status[1] * 100))
 
         if self.size != 0:
             units = size_fmt(self.size)

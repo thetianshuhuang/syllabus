@@ -17,6 +17,8 @@ class TaskInfoMixin:
         Task description
     tier : int
         Task depth of the current task
+    started : bool
+        If False, the task is not labeled as started, and is only intialized.
 
     Attributes
     ----------
@@ -39,7 +41,7 @@ class TaskInfoMixin:
         Unique ID
     """
 
-    def _info_init(self, name='Task', desc=None, tier=0):
+    def _info_init(self, name='Task', desc=None, tier=0, started=True):
 
         # User parameters
         self.name = name
@@ -47,36 +49,16 @@ class TaskInfoMixin:
         self.tier = tier
 
         # Default parameters
-        self.size = None
+        self.size = 0
         self.end = None
         self.children = {}
 
         # Generated Parameters
-        self.start = time.time()
+        if started:
+            self.start = time.time()
+        else:
+            self.start = None
         self.id = uuid.uuid4()
-
-    def set_info(self, name=None, desc=None):
-        """Set description.
-
-        Parameters
-        ----------
-        name : str
-            If not None, sets task name
-        desc : str
-            If not None, sets task description
-
-        Returns
-        -------
-        Task
-            self to allow method chaining
-        """
-
-        if name is not None:
-            self.name = name
-        if desc is not None:
-            self.desc = desc
-
-        return self
 
     def metadata(self):
         """Get metadata as a dictionary
@@ -125,14 +107,20 @@ class TaskInfoMixin:
 
     def runtime(self):
         """Get the current runtime"""
-        return (time.time() if self.end is None else self.end) - self.start
+        if self.start is not None:
+            return (time.time() if self.end is None else self.end) - self.start
+        else:
+            return 0
 
-    def __header(self, rtier=1):
-        # temporary
-        return "  | " * (self.tier + rtier) + "<" + self.name + "> "
-
-    def reset(self, name=None, desc=None):
+    def run(self, name=None, desc=None):
         """Reset the start time
+
+        Parameters
+        ----------
+        name : str
+            If not None, sets task name
+        desc : str
+            If not None, sets task description
 
         Returns
         -------
@@ -140,9 +128,12 @@ class TaskInfoMixin:
             self to allow method chaining
         """
 
-        if name is not None and desc is not None:
-            self.print(self.__header(0) + desc)
+        if name is not None:
+            self.name = name
+        if desc is not None:
+            self.desc = desc
 
+        self.about()
         self.start = time.time()
         return self
 

@@ -36,8 +36,7 @@ class MapReduceMixin:
             update = None
 
         if type(update) == dict:
-            # self.children[update["id"]].update(update)
-            pass
+            self.children[update["id"]].update(update)
         elif type(update) == str:
             self.print(update)
 
@@ -83,19 +82,22 @@ class MapReduceMixin:
         return results[0]
 
     def pool(
-            self, target, args,
+            self, target, args, shared_args=None, shared_init=None,
             reducer=None, recursive=True, split=2,
             name='Child Task Process', cores=None):
         """Run a task-wrapped pool
 
         Parameters
         ----------
-        target : T, task=subtask -> result
-            Function to run on each argument. The argument is passed as a
-            tuple with the argument in position 0 and a subtask in position
-            1
+        target : [arg, task] -> result
+            Function to run on each argument; shared_args should be set as
+            globals by shared_init.
         args : T[]
             List of parameters (arbitrary type)
+        shared_args : arbitrary type
+            Shared arguments to pass to each process
+        shared_init : shared_args -> void
+            Set globals in order to handle shared arg inheritance
         reducer : result[], task=subtask -> result
             Combines multiple results into a single object.
         recursive : bool
@@ -113,14 +115,25 @@ class MapReduceMixin:
         acc = threading.Thread(target=self.__accounting_thread)
         acc.start()
 
+        # Quick function to create a subtask
+        def make_subtask():
+            return self.subtask(name=name, is_process=True, started=False)
+
+        # Set up initializer for inheritance
+        if shared_args is not None and shared_init is not None:
+            p = Pool(processes=cores,
+                     initializer=shared_init,
+                     initargs=shared_args)
+        else:
+            p = Pool(processes=cores)
+
+        # Set up genexpr for args
+        genexpr = (
+            [arg, self.subtask(name=name, started=False)]
+            for arg in args)
+
         # Run pool
-        # Partial is run so that each copy recieves a new task
-        p = Pool(processes=cores)
-        results = p.map(
-            partial(
-                target,
-                task=self.subtask(name=name, desc='', is_process=True)),
-            args)
+        results = p.map(target, genexpr)
 
         # Kill accounting thread
         self.accounting_flag = False
