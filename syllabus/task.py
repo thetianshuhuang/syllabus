@@ -27,7 +27,7 @@ class Task(ReporterMixin, ParallelMixin):
         if desc is not None:
             self.desc = desc
 
-    def start(self, name=None, desc=None):
+    def start(self, name=None, desc=None, silent=False):
         """Start the Task tracker
 
         Parameters
@@ -36,10 +36,22 @@ class Task(ReporterMixin, ParallelMixin):
             Name to set
         desc : str or None
             Description to set
+        silent : bool
+            If True, no status is printed out
+
+        Returns
+        -------
+        self
+            Allow method chaining
         """
 
         self.__update_name(name=name, desc=desc)
         self.start_time = time.time()
+
+        if not silent:
+            self.print(self.desc, rtier=0)
+
+        return self
 
     def done(self, *objects, name=None, desc=None, silent=False):
         """Mark the current task as 'done'
@@ -65,7 +77,7 @@ class Task(ReporterMixin, ParallelMixin):
 
         if not silent:
             self.print_raw(
-                "  | " * self.tier +
+                p.render("  | " * self.tier, p.BR + p.BLACK) +
                 p.render(self.__str__(), p.BR + p.GREEN, p.BOLD))
 
     def subtask(self, name='Child Task', desc=None):

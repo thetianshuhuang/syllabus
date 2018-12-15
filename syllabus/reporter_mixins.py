@@ -62,13 +62,14 @@ class ReporterMixin:
         self.name = name
         self.desc = desc
         self.tier = tier
+        self.root = root
 
         # Generated parameters
         self.start_time = None
         self.end_time = None
         self.size = 0
         self.children = {}
-        self.id = uuid.uuid4()
+        self.id = str(uuid.uuid4())
 
         # Handle reporter
         if root:
@@ -86,14 +87,26 @@ class ReporterMixin:
     # -- Reporting ------------------------------------------------------------
     #
 
+    def acc_join(self):
+        """Spin-lock to wait for reporter print queue to empty"""
+
+        time.sleep(0.1)
+        while not self.reporter.empty():
+            pass
+
     def accounting_init(self):
         """Initialize accounting thread"""
 
         self.reporter = Manager().Queue()
-        self.log = []
 
         def accounting_loop():
-            while main_thread().is_alive:
+            # Main thread must be alive
+            # Task must either still be running, or items left in the queue
+            while (
+                    main_thread().is_alive and (
+                        self.end_time is None or
+                        self.reporter.qsize() > 0
+                    )):
                 self.accounting()
 
         self.accounting_thread = Thread(target=accounting_loop)
@@ -113,7 +126,7 @@ class ReporterMixin:
             self.update(update)
         # Str -> print
         elif type(update) == str:
-            print(update)
+            p.print(update)
 
     #
     # -- Console Interface ----------------------------------------------------
@@ -122,17 +135,19 @@ class ReporterMixin:
     def __header(self, rtier=1):
         """Get process header"""
 
-        return "  | " * (self.tier + rtier) + "<" + self.name + "> "
+        return (
+            p.render("  | " * (self.tier + rtier), p.BR + p.BLACK) +
+            "<" + self.name + "> ")
 
     def print_raw(self, msg):
         """Print message directly (to reporter thread)"""
 
         self.reporter.put(str(msg))
 
-    def print(self, msg):
+    def print(self, msg, rtier=1):
         """Print message (adds header)"""
 
-        self.print_raw(self.__header() + str(msg))
+        self.print_raw(self.__header(rtier=rtier) + str(msg))
 
     def about(self):
         """Print task information"""
@@ -144,12 +159,12 @@ class ReporterMixin:
     def error(self, e):
         """Print error"""
 
-        self.print(p.render("[ERROR]", p.BR + p.RED, p.BOLD) + str(e))
+        self.print(p.render("[ERROR] ", p.BR + p.RED, p.BOLD) + str(e))
 
     def warn(self, e):
         """Print warning"""
 
-        self.print(p.render("[WARNING]", p.YELLOW, p.BOLD) + str(e))
+        self.print(p.render("[WARNING] ", p.YELLOW, p.BOLD) + str(e))
 
     #
     # -- Metadata update and export -------------------------------------------
@@ -165,7 +180,7 @@ class ReporterMixin:
         """
 
         return {
-            'start_time': self.start,
+            'start_time': self.start_time,
             'end_time': self.end_time,
             'name': self.name,
             'desc': self.desc,
@@ -173,7 +188,6 @@ class ReporterMixin:
             'children': [child.metadata() for child in self.children.values()],
             'tier': self.tier,
             'id': self.id,
-            'log': self.log
         }
 
     def update(self, metadata):
@@ -185,13 +199,13 @@ class ReporterMixin:
             Updated information
         """
 
-        self.start = metadata.get('start_time')
-        self.end = metadata.get('end_time')
+        self.start_time = metadata.get('start_time')
+        self.end_time = metadata.get('end_time')
         self.name = metadata.get('name')
         self.desc = metadata.get('desc')
         self.size = metadata.get('size')
         self.tier = metadata.get('tier')
-        self.id = metadata.get('id')
+        self.id = str(metadata.get('id'))
         # log is not updated, since only the top-level task should be tracking
 
         for uid in metadata["children"]:

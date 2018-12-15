@@ -1,13 +1,13 @@
 
 """Multiprocessing-like threading interface"""
 
-
+# Multithreading
 from multiprocessing import cpu_count
 from threading import Thread, main_thread
 from queue import Queue, Empty
-from collections import namedtuple
-from .task import Task
 
+# AsyncJob named tuple
+from collections import namedtuple
 AsyncJob = namedtuple('Job', ['target', 'args', 'kwargs', 'task'])
 
 
@@ -44,8 +44,8 @@ class Worker(Thread):
         while main_thread().is_alive() and self.running:
             not_empty = True
             try:
-                f, arg, args, kwargs, task = self.arg_queue.get(timeout=1)
-                self.result_queue.put(f(arg, *args, task=task, **kwargs))
+                f, args, kwargs, task = self.arg_queue.get(timeout=1)
+                self.result_queue.put(f(*args, task=task, **kwargs))
             except Empty:
                 not_empty = False
             except Exception as e:
@@ -99,14 +99,14 @@ class Pool:
             Keyword arguments to pass to each function
         """
 
-        # Make new task if none exists
+        # Check for task
         if task is None:
-            task = Task('Child Thread')
+            raise Exception("No parent task supplied.")
 
         # Make generator expression
         genexpr = (
             AsyncJob(
-                target=target, args=[arg] + args, kwargs=kwargs,
+                target=target, args=[arg] + list(args), kwargs=kwargs,
                 task=task.subtask(name=name))
             for arg in arglist)
 

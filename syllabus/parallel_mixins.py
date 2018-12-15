@@ -1,7 +1,8 @@
 
 """Task-wrapped map-reduce implementations"""
 
-from .threadpool import Pool
+from .threadpool import Pool as ThreadPool
+from multiprocessing import Pool as ProcPool
 
 
 class ParallelMixin:
@@ -56,24 +57,27 @@ class ParallelMixin:
             no reducer is provided, the results are returned as a list.
         """
 
-        self.log('Set up thread map')
-        p = Pool(threads=threads)
-        self.log(
+        self.print('Set up thread map')
+        p = ThreadPool(threads=threads)
+        self.print(
             'Started thread pool map with {i} processes'
             .format(i=threads))
         results = p.map(
-            target, args, **shared_args,
+            target, args, *shared_args,
             task=self, name=name, **shared_kwargs)
-        self.log('Reducing results...')
 
-        if reducer is not None:
-            results = reducer(results)  # todo: handle recursive
+        # Return immediately if reducer not supplied
+        if reducer is None:
+            return results
+
+        self.print('Reducing results...')
+        results = reducer(results)  # todo: handle recursive
 
         return results
 
     def __proc_pool(
             self, target, args,
-            shared_kwargs=None, shared_init=None,
+            shared_args=None, shared_init=None,
             reducer=None, recursive=True, split=2,
             name='Child Task Process', cores=None):
         """Run a task-wrapped process pool
@@ -85,7 +89,7 @@ class ParallelMixin:
             globals by shared_init.
         args : T[]
             List of parameters (arbitrary type)
-        shared_kwargs : {arbitrary type}
+        shared_args : [arbitrary type]
             Shared arguments to pass to each process
         shared_init : shared_args -> void
             Set globals in order to handle shared arg inheritance
@@ -108,27 +112,48 @@ class ParallelMixin:
             no reducer is provided, the results are returned as a list.
         """
 
-        if shared_kwargs is not None and shared_init is not None:
-            self.log('Set up process map with initializer')
-            p = Pool(
+        if shared_args is not None and shared_init is not None:
+            self.print('Set up process map with initializer')
+            p = ProcPool(
                 processes=cores,
-                intitializer=shared_init,
-                initargs=shared_kwargs)
+                initializer=shared_init,
+                initargs=shared_args)
 
         else:
-            self.log('Set up process map with no initializer')
-            p = Pool(processes=cores)
+            self.print('Set up process map with no initializer')
+            p = ProcPool(processes=cores)
 
         # Task generator expression
         genexpr = ([arg, self.subtask(name=name)] for arg in args)
 
-        self.log(
+        self.print(
             'Started process pool map with {i} processes'
             .format(i=cores))
         results = p.map(target, genexpr)
-        self.log('Reducing results...')
+        self.print('Finished map phase')
 
-        if reducer is not None:
-            results = reducer(results)  # todo: handle recursive
+        # Return immediately if no reducer required
+        if reducer is None:
+            self.warn('No reducer supplied. Raw results returned.')
+            return results
 
-        return results
+        # Create reducer subtask
+        rtask = self.subtask().start(
+            name="Reducer", desc="Reducing Results...")
+        rtask_rd = 1
+
+        # Proceed until only one item remains
+        while len(results) > 1:
+            p = ProcPool(processes=cores)
+            results = p.map(
+                reducer, [
+                    [results[i:i + split], self]
+                    for i in range(0, len(results), split)
+                ])
+
+            rtask.print('Finished round {i} of reduce'.format(i=rtask_rd))
+            rtask_rd += 1
+
+        rtask.done(desc="Reduced results")
+
+        return results[0]
