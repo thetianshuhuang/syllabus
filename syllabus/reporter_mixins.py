@@ -1,0 +1,263 @@
+
+"""Task reporting methods"""
+
+# Parameter generation
+import uuid
+import time
+
+# Thread management
+from threading import main_thread, Thread
+from queue import Empty as EmptyException
+from multiprocessing import Manager
+
+# I/O
+import print as p
+import json
+
+# Log Entry namedtuple
+from collections import namedtuple
+LogEntry = namedtuple('LogEntry', ['time', 'log'])
+
+
+class ReporterMixin:
+    """Reporting Mixin for Task Class
+
+    Parameters
+    ----------
+    name : str
+        Desired task name
+    desc : str or None
+        Task description; if None, then defaults to
+        '(no description available)' when displayed
+    tier : int
+        Tier hierarchy of this task
+    root : bool
+        True if this is the root task, and False otherwise
+
+    Attributes
+    ----------
+    name, desc, tier : str, str/None, int
+        Set by initializer (see above)
+    start_time : float
+        Start time, in seconds (epoch time); if not started, None
+    end_time : float
+        End time, in seconds (epoch time); if not done, None
+    size : int
+        Size of registered objects, in bytes
+    children : dict
+        Dictionary of all created subtasks
+    id : str
+        Unique ID for this task
+    reporter : Queue
+        Reporting queue
+    log : list
+        List of LogEntry namedtuples
+    """
+
+    def __init__(
+            self, name='Task', desc=None, tier=0,
+            root=True, reporter=None):
+
+        # Display parameters
+        self.name = name
+        self.desc = desc
+        self.tier = tier
+
+        # Generated parameters
+        self.start_time = None
+        self.end_time = None
+        self.size = 0
+        self.children = {}
+        self.id = uuid.uuid4()
+
+        # Handle reporter
+        if root:
+            # should not provide reporter
+            if reporter is not None:
+                raise Exception("Root Task should not have a reporter.")
+            self.accounting_init()
+        else:
+            # Must have reporter
+            if reporter is None:
+                raise Exception("Non-root task must have a reporter.")
+            self.reporter = reporter
+
+    #
+    # -- Reporting ------------------------------------------------------------
+    #
+
+    def accounting_init(self):
+        """Initialize accounting thread"""
+
+        self.reporter = Manager().Queue()
+        self.log = []
+
+        def accounting_loop():
+            while main_thread().is_alive:
+                self.accounting()
+
+        self.accounting_thread = Thread(target=accounting_loop)
+        self.accounting_thread.start()
+
+    def accounting(self):
+        """Run one accounting iteration"""
+
+        # Get next update
+        try:
+            update = self.reporter.get_nowait()
+        except EmptyException:
+            update = None
+
+        # Dict -> status update
+        if type(update) == dict:
+            self.update(update)
+        # Str -> print
+        elif type(update) == str:
+            print(update)
+
+    #
+    # -- Console Interface ----------------------------------------------------
+    #
+
+    def __header(self, rtier=1):
+        """Get process header"""
+
+        return "  | " * (self.tier + rtier) + "<" + self.name + "> "
+
+    def print_raw(self, msg):
+        """Print message directly (to reporter thread)"""
+
+        self.reporter.put(str(msg))
+
+    def print(self, msg):
+        """Print message (adds header)"""
+
+        self.print_raw(self.__header() + str(msg))
+
+    def about(self):
+        """Print task information"""
+
+        self.print(
+            "(no description available)" if self.desc is None
+            else self.desc)
+
+    def error(self, e):
+        """Print error"""
+
+        self.print(p.render("[ERROR]", p.BR + p.RED, p.BOLD) + str(e))
+
+    def warn(self, e):
+        """Print warning"""
+
+        self.print(p.render("[WARNING]", p.YELLOW, p.BOLD) + str(e))
+
+    #
+    # -- Metadata update and export -------------------------------------------
+    #
+
+    def metadata(self):
+        """Get metadata as a dictionary
+
+        Returns
+        -------
+        dict
+            Task metadata; follows child relationships recursively
+        """
+
+        return {
+            'start_time': self.start,
+            'end_time': self.end_time,
+            'name': self.name,
+            'desc': self.desc,
+            'size': self.size,
+            'children': [child.metadata() for child in self.children.values()],
+            'tier': self.tier,
+            'id': self.id,
+            'log': self.log
+        }
+
+    def update(self, metadata):
+        """Recursively update task and child tasks from a metadata dictionary
+
+        Parameters
+        ----------
+        metadata : dict
+            Updated information
+        """
+
+        self.start = metadata.get('start_time')
+        self.end = metadata.get('end_time')
+        self.name = metadata.get('name')
+        self.desc = metadata.get('desc')
+        self.size = metadata.get('size')
+        self.tier = metadata.get('tier')
+        self.id = metadata.get('id')
+        # log is not updated, since only the top-level task should be tracking
+
+        for uid in metadata["children"]:
+            if uid in self.children:
+                self.children[uid].update(metadata["children"][uid])
+
+    def json(self):
+        """Get a json representation of the task's metadata
+
+        Returns
+        -------
+        json
+            Json output of metadata dict
+        """
+
+        if not hasattr(self, 'metadata'):
+            raise Exception(
+                "MetadataMixins must be used on a class with a 'metadata' "
+                "method")
+
+        return json.dumps(self.metadata())
+
+    def save(self, file):
+        """Save metadata as a json to a file.
+
+        Parameters
+        ----------
+        file : str
+            File to save to
+        """
+
+        with open(file, 'w') as output:
+            output.write(self.json())
+
+    #
+    # -- Runtime --------------------------------------------------------------
+    #
+
+    def runtime(self):
+        """Get the current runtime
+
+        Returns
+        -------
+        Current runtime, in seconds; if not started, returns 0
+        """
+
+        if self.start_time is not None:
+            if self.end_time is not None:
+                return self.end_time - self.start_time
+            else:
+                return time.time() - self.start_time
+        else:
+            return 0
+
+    def status(self):
+        """Get number of complete and total tasks
+
+        Returns
+        -------
+        (int, int)
+            [0] Number of finished tasks
+            [1] Total number of tasks
+        """
+
+        done = 0
+        for child in self.children.values():
+            if child.end_time is not None:
+                done += 1
+        return(done, len(self.children))
