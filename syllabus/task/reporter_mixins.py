@@ -8,6 +8,7 @@ import time
 # Thread management
 from threading import main_thread, Thread
 from queue import Empty as EmptyException
+from queue import Queue
 from multiprocessing import Manager
 
 # I/O
@@ -33,6 +34,9 @@ class ReporterMixin:
         Tier hierarchy of this task
     root : bool
         True if this is the root task, and False otherwise
+    mp : bool
+        True if multiprocessing should be enabled (Manager.Queue used); False
+        otherwise (normal Queue; to be used with threading)
 
     Attributes
     ----------
@@ -52,11 +56,13 @@ class ReporterMixin:
         Reporting queue
     log : list
         List of LogEntry namedtuples
+    mp : bool
+        Multiprocessing enabled?
     """
 
     def __init__(
             self, name='Task', desc=None, tier=0,
-            root=True, reporter=None):
+            root=True, reporter=None, mp=False):
 
         # Display parameters
         self.name = name
@@ -72,6 +78,7 @@ class ReporterMixin:
         self.id = str(uuid.uuid4())
 
         # Handle reporter
+        self.mp = mp
         if root:
             # should not provide reporter
             if reporter is not None:
@@ -97,7 +104,10 @@ class ReporterMixin:
     def accounting_init(self):
         """Initialize accounting thread"""
 
-        self.reporter = Manager().Queue()
+        if self.mp:
+            self.reporter = Manager().Queue()
+        else:
+            self.reporter = Queue()
 
         def accounting_loop():
             # Main thread must be alive
@@ -110,6 +120,7 @@ class ReporterMixin:
                 self.accounting()
 
         self.accounting_thread = Thread(target=accounting_loop)
+        self.accounting_thread.daemon = True
         self.accounting_thread.start()
 
     def accounting(self):

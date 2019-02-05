@@ -44,7 +44,7 @@ class Worker(Thread):
         while main_thread().is_alive() and self.running:
             not_empty = True
             try:
-                f, args, kwargs, task = self.arg_queue.get(timeout=1)
+                f, args, kwargs, task = self.arg_queue.get_nowait()
                 self.result_queue.put(f(*args, task=task, **kwargs))
             except Empty:
                 not_empty = False
@@ -53,6 +53,10 @@ class Worker(Thread):
             finally:
                 if not_empty:
                     self.arg_queue.task_done()
+
+    def stop(self):
+        """Stop the worker thread"""
+        self.running = False
 
 
 class Pool:
@@ -73,9 +77,9 @@ class Pool:
 
         self.task_queue = Queue()
         self.result_queue = Queue()
-
-        for _ in range(threads):
-            Worker(self.task_queue, self.result_queue).start()
+        self.workers = [
+            Worker(self.task_queue, self.result_queue)
+            for _ in range(threads)]
 
     def map(
             self, target, arglist, *args,
@@ -98,6 +102,9 @@ class Pool:
         **kwargs : dict
             Keyword arguments to pass to each function
         """
+
+        for worker in self.workers:
+            worker.start()
 
         # Check for task
         if task is None:
@@ -129,4 +136,8 @@ class Pool:
 
         # Wait for all jobs to finish
         self.task_queue.join()
+
+        for worker in self.workers:
+            worker.stop()
+
         return list(self.result_queue.queue)

@@ -101,7 +101,8 @@ class Task(ReporterMixin, ParallelMixin):
             desc=desc,
             tier=self.tier + 1,
             reporter=self.reporter,
-            root=False)
+            root=False,
+            mp=self.mp)
         self.children[new_task.id] = new_task
 
         return new_task

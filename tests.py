@@ -1,39 +1,61 @@
 
+"""Tests and examples for SYLLABUS"""
+
 import time
 from syllabus import Task
-from print import *
 
 
-def expensive_task(x):
+def expensive_task(arg, task=Task()):
+    """This task takes 0.25s to execute."""
 
-    arg, task = x
-    task.reset()
-    task.set_info('Child Task Process {n}'.format(n=arg))
+    # Start timing
+    task.start()
+
+    # Print message (sends message to accounting thread)
+    task.print('Child Task Process {n}'.format(n=arg))
 
     # Do things
+    # very complicated phd-level math
     time.sleep(0.25)
+    assert(1 + 1 == 2)
 
+    # Example error reporting
     if arg % 3 == 0:
         task.error('Example error: x is a multiple of 3')
 
-    task.info('This is a long entry ' + str(arg))
-    task.done('finished task')
+    # Example entry
+    task.print('This is a long entry ' + str(arg))
 
-    return x[1]
+    # Task done - stops timer
+    task.done(desc='finished task')
+
+    return arg
+
+
+def expensive_proctask(x):
+    """Wrapper of expensive_task for procpool"""
+
+    arg, task = x
+    return expensive_task(arg, task=task)
 
 
 if __name__ == "__main__":
 
-    putil.LOG_FILE = 'log.txt'
+    # Initialize task; note the .start() called at the end
+    main = Task("Main Task", desc='the main task', mp=False).start()
 
-    main = Task("Main Task", desc='the main task')
-
+    # Single-threaded
     st1 = main.subtask("Task #1", desc='first subtask')
-    expensive_task([5, st1])
-
+    expensive_task(5, task=st1)
     st2 = main.subtask("Task #1", desc='first subtask')
-    expensive_task([10, st2])
+    expensive_task(10, task=st2)
 
-    main.pool(expensive_task, [i for i in range(10)], cores=2)
+    # Multithreading
+    main.pool(expensive_task, [i for i in range(10)], process=False)
 
-    main.done("Finished!")
+    main.done(desc="Finished!")
+
+    # Multiprocessing - must have mp=True enabled to use multiprocessing
+    main = Task("MP-enabled Main Task", desc='mp=True', mp=True).start()
+    main.pool(expensive_proctask, [i for i in range(10)], process=True)
+    main.done(desc="Finished!")

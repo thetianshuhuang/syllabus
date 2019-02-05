@@ -17,6 +17,10 @@ class ParallelMixin:
         """
 
         if process:
+            if not self.mp:
+                raise Exception(
+                    "Task does not have multiprocessing enabled. The parent"
+                    " task must have mp=True.")
             return self.__proc_pool(*args, **kwargs)
         else:
             return self.__thread_pool(*args, **kwargs)
