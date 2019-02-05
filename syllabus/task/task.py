@@ -118,7 +118,7 @@ class Task(ReporterMixin, ParallelMixin):
         """
 
         t = self.runtime()
-        if t > 0.1:
+        if t > 0.5:
             info = ["{t:.2f}s".format(t=self.runtime())]
         elif t > 0.01:
             info = ["{t:.1f}ms".format(t=t * 1000)]
