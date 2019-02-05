@@ -117,7 +117,15 @@ class Task(ReporterMixin, ParallelMixin):
             "[1.92s | 10.82MB] <Image Loader> Loaded image example.png"
         """
 
-        info = ["{t:.2f}s".format(t=self.runtime())]
+        t = self.runtime()
+        if t > 0.1:
+            info = ["{t:.2f}s".format(t=self.runtime())]
+        elif t > 0.01:
+            info = ["{t:.1f}ms".format(t=t * 1000)]
+        elif t > 0.001:
+            info = ["{t:.2f}ms".format(t=t * 1000)]
+        else:
+            info = ["{t:.3f}ms".format(t=t * 1000)]
 
         if self.size != 0:
             val, units = size_fmt(self.size)
