@@ -58,6 +58,12 @@ class ReporterMixin:
         List of LogEntry namedtuples
     mp : bool
         Multiprocessing enabled?
+    errors : str[]
+        List of errors
+    warnings : str[]
+        List of warnings
+    messages : str[]
+        List of messages sent
     """
 
     def __init__(
@@ -153,11 +159,13 @@ class ReporterMixin:
     def print_raw(self, msg):
         """Print message directly (to reporter thread)"""
 
+        self.messages.append(str(msg))
         self.reporter.put(str(msg))
 
     def print(self, msg, rtier=1):
         """Print message (adds header)"""
 
+        self.messages.append(str(msg))
         self.print_raw(self.__header(rtier=rtier) + str(msg))
 
     def about(self):
@@ -170,11 +178,13 @@ class ReporterMixin:
     def error(self, e):
         """Print error"""
 
+        self.errors.append(str(e))
         self.print(p.render("[ERROR] ", p.BR + p.RED, p.BOLD) + str(e))
 
     def warn(self, e):
         """Print warning"""
 
+        self.warnings.append(str(e))
         self.print(p.render("[WARNING] ", p.YELLOW, p.BOLD) + str(e))
 
     #
@@ -193,12 +203,16 @@ class ReporterMixin:
         return {
             'start_time': self.start_time,
             'end_time': self.end_time,
+            'runtime': self.runtime(),
             'name': self.name,
             'desc': self.desc,
             'size': self.size,
             'children': [child.metadata() for child in self.children.values()],
             'tier': self.tier,
             'id': self.id,
+            'messages': self.messages,
+            'warnings': self.warnings,
+            'errors': self.errors
         }
 
     def update(self, metadata):
