@@ -53,7 +53,7 @@ class Task(ReporterMixin, ParallelMixin):
 
         return self
 
-    def done(self, *objects, name=None, desc=None, silent=False):
+    def done(self, *objects, name=None, desc=None, silent=False, join=False):
         """Mark the current task as 'done'
 
         Parameters
@@ -68,6 +68,8 @@ class Task(ReporterMixin, ParallelMixin):
             reflect the status -- 'loading images' -> 'loaded images')
         silent : bool
             If True, no status is printed out.
+        join : bool
+            If True, spins until the task is completely cleared.
         """
 
         self.size = sum(sys.getsizeof(obj) for obj in objects)
@@ -79,6 +81,10 @@ class Task(ReporterMixin, ParallelMixin):
             self.print_raw(
                 p.render("  | " * self.tier, p.BR + p.BLACK) +
                 p.render(self.__str__(), p.BR + p.GREEN, p.BOLD))
+
+        if join:
+            while(self.reporter.qsize() > 0):
+                pass
 
     def subtask(self, name='Child Task', desc=None):
         """Create a subtask
