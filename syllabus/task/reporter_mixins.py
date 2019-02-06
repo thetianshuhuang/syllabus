@@ -80,6 +80,9 @@ class ReporterMixin:
         self.start_time = None
         self.end_time = None
         self.size = 0
+        self.errors = []
+        self.warnings = []
+        self.messages = []
         self.children = {}
         self.id = str(uuid.uuid4())
 
