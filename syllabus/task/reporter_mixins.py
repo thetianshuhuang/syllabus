@@ -261,17 +261,19 @@ class ReporterMixin:
         else:
             return json.dumps(self.metadata())
 
-    def save(self, file):
+    def save(self, file, pretty=False):
         """Save metadata as a json to a file.
 
         Parameters
         ----------
         file : str
             File to save to
+        pretty : bool
+            Pretty or minimal json?
         """
 
         with open(file, 'w') as output:
-            output.write(self.json())
+            output.write(self.json(pretty))
 
     #
     # -- Runtime --------------------------------------------------------------
