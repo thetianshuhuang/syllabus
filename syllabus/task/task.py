@@ -83,8 +83,9 @@ class Task(ReporterMixin, ParallelMixin):
                 p.render(self.__str__(), p.BR + p.GREEN, p.BOLD))
 
         if join:
-            while(self.reporter.qsize() > 0):
-                pass
+            if hasattr(self.accounting_thread):
+                while self.accounting_thread.is_alive():
+                    pass
 
     def subtask(self, name='Child Task', desc=None):
         """Create a subtask
