@@ -83,7 +83,7 @@ class Task(ReporterMixin, ParallelMixin):
                 p.render(self.__str__(), p.BR + p.GREEN, p.BOLD))
 
         if join:
-            if hasattr(self.accounting_thread):
+            if hasattr(self, "accounting_thread"):
                 while self.accounting_thread.is_alive():
                     pass
 

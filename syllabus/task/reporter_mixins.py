@@ -228,14 +228,22 @@ class ReporterMixin:
         self.size = metadata.get('size')
         self.tier = metadata.get('tier')
         self.id = str(metadata.get('id'))
+        self.warnings = metadata.get("warnings")
+        self.errors = metadata.get("errors")
         # log is not updated, since only the top-level task should be tracking
 
         for uid in metadata["children"]:
             if uid in self.children:
                 self.children[uid].update(metadata["children"][uid])
 
-    def json(self):
+    def json(self, pretty=False):
         """Get a json representation of the task's metadata
+
+        Parameters
+        ----------
+        pretty : bool
+            If True, a prettified json is returned. Otherwise, a minimal json
+            is created.
 
         Returns
         -------
@@ -248,7 +256,10 @@ class ReporterMixin:
                 "MetadataMixins must be used on a class with a 'metadata' "
                 "method")
 
-        return json.dumps(self.metadata())
+        if pretty:
+            return json.dumps(self.metadata(), indent=4, sort_keys=True)
+        else:
+            return json.dumps(self.metadata())
 
     def save(self, file):
         """Save metadata as a json to a file.

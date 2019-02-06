@@ -53,9 +53,19 @@ if __name__ == "__main__":
     # Multithreading
     main.pool(expensive_task, [i for i in range(10)], process=False)
 
-    main.done(desc="Finished!")
+    main.done(desc="Finished!", join=True)
+
+    print("\nTask Trace:")
+    print("-----------")
+    print(main.json(pretty=True))
+    print("\n")
 
     # Multiprocessing - must have mp=True enabled to use multiprocessing
-    main = Task("MP-enabled Main Task", desc='mp=True', mp=True).start()
-    main.pool(expensive_proctask, [i for i in range(10)], process=True)
-    main.done(desc="Finished!")
+    main2 = Task("MP-enabled Main Task", desc='mp=True', mp=True).start()
+    main2.pool(expensive_proctask, [i for i in range(10)], process=True)
+    main2.done(desc="Finished!", join=True)
+
+    print("\nTask Trace:")
+    print("-----------")
+    print(main2.json(pretty=True))
+    print("\n")
