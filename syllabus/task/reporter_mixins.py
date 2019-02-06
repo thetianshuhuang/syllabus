@@ -62,8 +62,6 @@ class ReporterMixin:
         List of errors
     warnings : str[]
         List of warnings
-    messages : str[]
-        List of messages sent
     """
 
     def __init__(
@@ -82,7 +80,6 @@ class ReporterMixin:
         self.size = 0
         self.errors = []
         self.warnings = []
-        self.messages = []
         self.children = {}
         self.id = str(uuid.uuid4())
 
@@ -162,13 +159,11 @@ class ReporterMixin:
     def print_raw(self, msg):
         """Print message directly (to reporter thread)"""
 
-        self.messages.append(str(msg))
         self.reporter.put(str(msg))
 
     def print(self, msg, rtier=1):
         """Print message (adds header)"""
 
-        self.messages.append(str(msg))
         self.print_raw(self.__header(rtier=rtier) + str(msg))
 
     def about(self):
@@ -213,7 +208,6 @@ class ReporterMixin:
             'children': [child.metadata() for child in self.children.values()],
             'tier': self.tier,
             'id': self.id,
-            'messages': self.messages,
             'warnings': self.warnings,
             'errors': self.errors
         }
