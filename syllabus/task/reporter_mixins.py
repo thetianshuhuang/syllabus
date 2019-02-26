@@ -121,7 +121,7 @@ class ReporterMixin:
             # Main thread must be alive
             # Task must either still be running, or items left in the queue
             while (
-                    main_thread().is_alive and (
+                    main_thread().is_alive() and (
                         self.end_time is None or
                         self.reporter.qsize() > 0
                     )):
@@ -152,7 +152,7 @@ class ReporterMixin:
             p.print(update)
         elif update is not None:
             import os
-            os.system('cls' if os.name == 'nt' else 'clear')
+            # os.system('cls' if os.name == 'nt' else 'clear')
             p.print(self.events)
 
     #

@@ -5,6 +5,15 @@ import time
 from syllabus import Task
 
 
+def cheap_task(arg, task=Task()):
+
+    task.start()
+    task.print('Cheap Task {n}'.format(n=arg))
+    task.done()
+
+    return arg
+
+
 def expensive_task(arg, task=Task()):
     """This task takes 0.25s to execute."""
 
@@ -49,8 +58,10 @@ if __name__ == "__main__":
     # Single-threaded
     st1 = main.subtask("Task #1", desc='first subtask')
     expensive_task(5, task=st1)
-    st2 = main.subtask("Task #1", desc='first subtask')
+    st2 = main.subtask("Task #2", desc='first subtask')
     expensive_task(10, task=st2)
+    cheap_task(0, task=main.subtask("Task #3"))
+    cheap_task(1, task=main.subtask("Task #4"))
 
     # Multithreading
     main.pool(expensive_task, [i for i in range(10)], process=False)

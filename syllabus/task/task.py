@@ -5,7 +5,7 @@ import sys
 import time
 import print as p
 
-from .memory import size_fmt
+from .units import size_fmt, time_fmt
 from .reporter_mixins import ReporterMixin
 from .parallel_mixins import ParallelMixin
 
@@ -124,15 +124,8 @@ class Task(ReporterMixin, ParallelMixin):
             "[1.92s | 10.82MB] <Image Loader> Loaded image example.png"
         """
 
-        t = self.runtime()
-        if t > 0.5:
-            info = ["{t:.2f}s".format(t=self.runtime())]
-        elif t > 0.01:
-            info = ["{t:.1f}ms".format(t=t * 1000)]
-        elif t > 0.001:
-            info = ["{t:.2f}ms".format(t=t * 1000)]
-        else:
-            info = ["{t:.3f}ms".format(t=t * 1000)]
+        val, units = time_fmt(self.runtime())
+        info = ["{t:.2f}{u}".format(t=val, u=units)]
 
         if self.size != 0:
             val, units = size_fmt(self.size)
