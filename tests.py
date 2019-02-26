@@ -41,6 +41,8 @@ def expensive_proctask(x):
 
 if __name__ == "__main__":
 
+    from print import argparse
+
     # Initialize task; note the .start() called at the end
     main = Task("Main Task", desc='the main task', mp=False).start()
 
@@ -55,17 +57,19 @@ if __name__ == "__main__":
 
     main.done(desc="Finished!", join=True)
 
-    print("\nTask Trace:")
-    print("-----------")
-    print(main.json(pretty=True))
-    print("\n")
+    if argparse.is_flag('t'):
+        print("\nTask Trace:")
+        print("-----------")
+        print(main.json(pretty=True))
+        print("\n")
 
     # Multiprocessing - must have mp=True enabled to use multiprocessing
     main2 = Task("MP-enabled Main Task", desc='mp=True', mp=True).start()
     main2.pool(expensive_proctask, [i for i in range(10)], process=True)
     main2.done(desc="Finished!", join=True)
 
-    print("\nTask Trace:")
-    print("-----------")
-    print(main2.json(pretty=True))
-    print("\n")
+    if argparse.is_flag('t'):
+        print("\nTask Trace:")
+        print("-----------")
+        print(main2.json(pretty=True))
+        print("\n")

@@ -15,6 +15,9 @@ from multiprocessing import Manager
 import print as p
 import json
 
+# syllabus
+from .messages import TaskEvent, TaskError, TaskWarning
+
 # Log Entry namedtuple
 from collections import namedtuple
 LogEntry = namedtuple('LogEntry', ['time', 'log'])
@@ -78,10 +81,9 @@ class ReporterMixin:
         self.start_time = None
         self.end_time = None
         self.size = 0
-        self.errors = []
-        self.warnings = []
         self.children = {}
         self.id = str(uuid.uuid4())
+        self.events = []
 
         # Handle reporter
         self.mp = mp
@@ -138,52 +140,52 @@ class ReporterMixin:
         except EmptyException:
             update = None
 
+        #
+        # TODO: rewrite to tree-based approach
+        #
+
         # Dict -> status update
         if type(update) == dict:
             self.update(update)
         # Str -> print
         elif type(update) == str:
             p.print(update)
+        elif update is not None:
+            import os
+            os.system('cls' if os.name == 'nt' else 'clear')
+            p.print(self.events)
 
     #
     # -- Console Interface ----------------------------------------------------
     #
 
-    def __header(self, rtier=1):
-        """Get process header"""
-
-        return (
-            p.render("  | " * (self.tier + rtier), p.BR + p.BLACK) +
-            "<" + self.name + "> ")
-
     def print_raw(self, msg):
         """Print message directly (to reporter thread)"""
 
-        self.reporter.put(str(msg))
+        self.reporter.put(msg)
+        self.events.append(msg)
 
     def print(self, msg, rtier=1):
         """Print message (adds header)"""
 
-        self.print_raw(self.__header(rtier=rtier) + str(msg))
+        self.print_raw(TaskEvent(msg, tier=self.tier + rtier))
 
     def about(self):
         """Print task information"""
 
-        self.print(
+        self.print_raw(TaskEvent(
             "(no description available)" if self.desc is None
-            else self.desc)
+            else self.desc, tier=self.tier))
 
     def error(self, e):
         """Print error"""
 
-        self.errors.append(str(e))
-        self.print(p.render("[ERROR] ", p.BR + p.RED, p.BOLD) + str(e))
+        self.print_raw(TaskError(e, tier=self.tier))
 
     def warn(self, e):
         """Print warning"""
 
-        self.warnings.append(str(e))
-        self.print(p.render("[WARNING] ", p.YELLOW, p.BOLD) + str(e))
+        self.print_raw(TaskWarning(e, tier=self.tier))
 
     #
     # -- Metadata update and export -------------------------------------------
@@ -208,8 +210,6 @@ class ReporterMixin:
             'children': [child.metadata() for child in self.children.values()],
             'tier': self.tier,
             'id': self.id,
-            'warnings': self.warnings,
-            'errors': self.errors
         }
 
     def update(self, metadata):
@@ -228,9 +228,6 @@ class ReporterMixin:
         self.size = metadata.get('size')
         self.tier = metadata.get('tier')
         self.id = str(metadata.get('id'))
-        self.warnings = metadata.get("warnings")
-        self.errors = metadata.get("errors")
-        # log is not updated, since only the top-level task should be tracking
 
         for uid in metadata["children"]:
             if uid in self.children:
