@@ -71,10 +71,10 @@ def run_tests(modules):
 
 if __name__ == "__main__":
 
-    import accounting
+    import accounting_tests
     # Add more modules here
     # Ex.
     # import foo
     # import bar
 
-    run_tests([accounting])
+    run_tests([accounting_tests])

@@ -1,10 +1,17 @@
+"""Task Accountant (and accessories)
 
-# Tests
-import unittest
+Usage
+-----
+
+
+"""
 
 # I/O
 import json
 import print as p
+import time
+from units import size_fmt, time_fmt
+from spinner import spinner
 
 # Threading
 import threading
@@ -21,12 +28,29 @@ UpdatePacket = collections.namedtuple(
     [
         "id",           # Source ID
         "data",         # Packet data -- dictionary containing keys to update
-        "events",       # Events -- list of TaskEvent objects
+        "events",       # Events -- list of dicts containing time, desc, type
         "children",     # New children -- list of ids
     ])
 
 
 class Accountant(threading.Thread):
+    """Task Accountant
+
+    Parameters
+    ----------
+    mp : bool
+        Enable multiprocessing? (Use Managed Queue instead of vanilla Queue)
+    root : str
+        Root node ID
+    """
+
+    MSG_HEADERS = {
+        "error": p.render("[ERROR]", p.BR + p.RED, p.BOLD),
+        "warning": p.render("[WARNING]", p.BR + p.YELLOW, p.BOLD),
+        "info": p.render("[info]", p.BR + p.BLUE, p.BOLD)
+    }
+
+    INDENT = " |  "
 
     def __init__(self, mp=False, root=None):
 
@@ -85,11 +109,27 @@ class Accountant(threading.Thread):
             }
 
         self.task_log[update.id].update(update.data)
-        self.task_log[update.id]["events"] += update.events
+        self.task_log[update.id]["events"] += (update.events)
         self.task_log[update.id]["children"] += update.children
 
-    def tree(self, root=None, nowait=False, previous=[]):
-        """Get tree representation of log
+    def tree(self, root=None, nowait=False, previous=None):
+        """Get task tree as dict
+
+        Parameters
+        ----------
+        root : str or None
+            Root node ID; if None, the program root is used.
+        nowait : bool
+            If True, the tree is computed immediately; if False, the task queue
+            is cleared first.
+        previous : str[]
+            Used by inductive step to prevent infinite loops on illegal
+            non-tree task topologies. Should not be used by the base case.
+
+        Returns
+        -------
+        dict
+            Dictionary representation of task tree
         """
 
         # block until all task events are cleared
@@ -97,32 +137,32 @@ class Accountant(threading.Thread):
             while self.queue.qsize() > 0:
                 pass
 
+        # Clear previous
+        if previous is None:
+            previous = []
+
         # no root -> base case
         if root is None:
-            if self.root is None:
-                return {}
-            else:
-                return self.tree(self.root)
+            return {} if self.root is None else self.tree(self.root)
         # key not present or already visited -> return empty
         elif root not in self.task_log or root in previous:
             return {'id': root}
         # root provided -> run recursive step
         else:
             previous.append(root)
-            d = {
-                k: v if k != 'children' else []
+            return {
+                k: v if k != 'children' else [
+                    self.tree(c, previous=previous)
+                    for c in self.task_log[root]['children']]
                 for k, v in self.task_log[root].items()
             }
-            for c in self.task_log[root]['children']:
-                d['children'].append(self.tree(c, previous=previous))
-            return d
 
     def json(self, root=None, pretty=False):
-        """Get a json representation of the task's metadata
+        """Get task tree as json
 
         Parameters
         ----------
-        root : str
+        root : str or None
             Root node ID; if None, the program root is used.
         pretty : bool
             If True, a prettified json is returned. Otherwise, a minimal json
@@ -139,75 +179,108 @@ class Accountant(threading.Thread):
         else:
             return json.dumps(self.tree(root=root))
 
+    def ordered_tree(self, tree=None, indent=0):
+        """Get ordered representation of task tree
 
-class Tests(unittest.TestCase):
+        Parameters
+        ----------
+        tree : dict
+            Dictionary to create ordered tree from. Used by inductive step;
+            should not be passed by user
+        indent : int
+            Current indentation level. Used by inductive step; should not be
+            passed by user
 
-    def test_accounting(self):
+        Returns
+        -------
+        (int, dict)[]
+            [(indentation level, line contents)]
+        """
 
-        accountant = Accountant(root='test-root')
-        q = accountant.queue
+        if tree is None:
+            tree = self.tree()
 
-        q.put(UpdatePacket(
-            id='test-root',
-            data={'start_time': 100},
-            events=['test event', 'test event 2'],
-            children=['test-child-1', 'test-child-2']))
+        ordered = [(indent, {
+            "id": tree["id"],
+            "progress": tree.get("progress"),
+            "size": tree.get("size"),
+            "name": tree.get("name"),
+            "desc": tree.get("desc"),
+            "start_time": tree.get("start_time"),
+            "end_time": tree.get("end_time")})]
 
-        q.put(UpdatePacket(
-            id='test-child-1',
-            data={'foo': ['bar', 'baz']},
-            events=['child event 1', 'child event 2'],
-            children=[]))
+        orderables = [
+            c for c in tree["children"] if c.get("start_time") is not None
+        ] + tree["events"]
+        orderables.sort(
+            key=lambda x: x["time"] if "time" in x else x["start_time"])
+        ordered_single_level = orderables + [
+            c for c in tree["children"] if c.get("start_time") is None]
 
-        q.put(UpdatePacket(
-            id='test-child-2',
-            data={'foo': ['???']},
-            events=[],
-            children=[]))
+        for event in ordered_single_level:
+            if "children" in event:
+                ordered += self.ordered_tree(event, indent=indent + 1)
+            else:
+                ordered.append((indent + 1, {
+                    "body": event["body"],
+                    "type": event["type"]
+                }))
 
-        self.assertEqual(accountant.tree(), {
-            "id": "test-root",
-            "start_time": 100,
-            "events": ["test event", "test event 2"],
-            "children": [
-                {
-                    "id": "test-child-1",
-                    "foo": ["bar", "baz"],
-                    "events": ["child event 1", "child event 2"],
-                    "children": []
-                },
-                {
-                    "id": "test-child-2",
-                    "foo": ["???"],
-                    "events": [],
-                    "children": []
-                }
-            ]
-        })
+        return ordered
 
-        accountant.stop()
-        self.assertTrue(accountant.stopped)
+    def line_to_str(self, line):
+        """Convert line to string
 
-    def test_circular_and_undefined(self):
+        Parameters
+        ----------
+        line : (int, dict)
+            (indentation, task dictionary)
 
-        accountant = Accountant(root='root')
-        q = accountant.queue
+        Returns
+        -------
+        str
+            Line converted to string for display
+        """
 
-        q.put(UpdatePacket(
-            id='root',
-            data={'is_root': True},
-            events=[],
-            children=['undefined-child', 'root']))
+        idt, d = line
+        ret = self.INDENT * idt
 
-        self.assertEqual(accountant.tree(), {
-            "id": "root",
-            "is_root": True,
-            "events": [],
-            "children": [
-                {"id": "undefined-child"},
-                {"id": "root"},
-            ]
-        })
+        # Task
+        if 'id' in d:
 
-        accountant.stop()
-        self.assertTrue(accountant.stopped)
+            # Task started
+            if d['start_time'] is not None:
+
+                # Task done
+                if d["end_time"] is not None:
+                    t, units = time_fmt(d["end_time"] - d["start_time"])
+                    ret += '[x][100%][==========][{t:.2f}{u}]'.format(
+                        t=t, u=units)
+
+                # Task not done
+                else:
+                    t, units = time_fmt(time.time() - d["start_time"])
+                    pr = d["progress"] if d["progress"] is not None else -1
+                    pbar = '=' * int(pr * 10) + ' ' * (10 - int(pr * 10))
+                    ret += '[{s}][{p}%][{b}][{t:.2f}{u}]'.format(
+                        p='??' if pr == -1 else int(pr * 100),
+                        b='N/A' if pr == -1 else pbar,
+                        t=t, u=units, s=spinner(period=1))
+
+            # Task not started
+            else:
+                ret += '[ ][0%]'
+
+            # Name and description
+            ret += ' {name} : {desc}'.format(name=d["name"], desc=d["desc"])
+
+        # Message
+        else:
+            ret += '{h} {b}'.format(h=self.MSG_HEADERS[d["type"]], b=d["body"])
+
+        return ret
+
+    def __str__(self):
+
+        return '\n'.join(
+            [self.line_to_str(line) for line in self.ordered_tree()])
