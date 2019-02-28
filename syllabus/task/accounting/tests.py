@@ -2,7 +2,7 @@
 
 from print import print
 import unittest
-from accounting import Accountant, UpdatePacket
+from .accountant import Accountant
 
 
 class Tests(unittest.TestCase):
@@ -12,30 +12,30 @@ class Tests(unittest.TestCase):
         accountant = Accountant(root='test-root')
         q = accountant.queue
 
-        q.put(UpdatePacket(
-            id='test-root',
-            data={'start_time': 100, 'progress': 0.521},
-            events=[
+        q.put({
+            "id": 'test-root',
+            "data": {'start_time': 100, 'progress': 0.521},
+            "events": [
                 {'body': 'test event', 'type': 'info', 'time': 100.10},
                 {'body': 'test event 2', 'type': 'error', 'time': 101.50}],
-            children=['test-child-1', 'test-child-2']))
+            "children": ['test-child-1', 'test-child-2']})
 
-        q.put(UpdatePacket(
-            id='test-child-1',
-            data={
+        q.put({
+            "id": 'test-child-1',
+            "data": {
                 'start_time': 100.53,
                 'end_time': 101.23,
                 'foo': ['bar', 'baz']},
-            events=[
+            "events": [
                 {'body': 'child event 1', 'type': 'warning', 'time': 100.60},
                 {'body': 'child event 2', 'type': 'warning', 'time': 101.01}],
-            children=[]))
+            "children": []})
 
-        q.put(UpdatePacket(
-            id='test-child-2',
-            data={'foo': ['???']},
-            events=[],
-            children=[]))
+        q.put({
+            "id": 'test-child-2',
+            "data": {'foo': ['???']},
+            "events": [],
+            "children": []})
 
         self.assertEqual(accountant.tree(), {
             "id": "test-root",
@@ -107,7 +107,7 @@ class Tests(unittest.TestCase):
             "\n\n"
             "Accountant Output -- Verify Manually\n"
             "------------------------------------\n\n")
-        print(str(accountant))
+        print(accountant.render_tree())
         print("\n\n")
 
         accountant.stop()
@@ -118,11 +118,11 @@ class Tests(unittest.TestCase):
         accountant = Accountant(root='root')
         q = accountant.queue
 
-        q.put(UpdatePacket(
-            id='root',
-            data={'is_root': True},
-            events=[],
-            children=['undefined-child', 'root']))
+        q.put({
+            "id": 'root',
+            "data": {'is_root': True},
+            "events": [],
+            "children": ['undefined-child', 'root']})
 
         self.assertEqual(accountant.tree(), {
             "id": "root",

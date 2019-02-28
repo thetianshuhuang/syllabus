@@ -3,6 +3,7 @@
 
 from .threadpool import Pool as ThreadPool
 from multiprocessing import Pool as ProcPool
+from multiprocessing import cpu_count
 
 
 class ParallelMixin:
@@ -61,20 +62,21 @@ class ParallelMixin:
             no reducer is provided, the results are returned as a list.
         """
 
-        self.print('Set up thread map')
+        self.system('Set up thread map')
         p = ThreadPool(threads=threads)
-        self.print(
+        self.system(
             'Started thread pool map with {i} processes'
-            .format(i=threads))
+            .format(i=cpu_count() if threads is None else threads))
         results = p.map(
             target, args, *shared_args,
             task=self, name=name, **shared_kwargs)
+        self.system("Finished map phase.")
 
         # Return immediately if reducer not supplied
         if reducer is None:
             return results
 
-        self.print('Reducing results...')
+        self.system('Reducing results...')
         results = reducer(results)  # todo: handle recursive
 
         return results
@@ -117,28 +119,27 @@ class ParallelMixin:
         """
 
         if shared_args is not None and shared_init is not None:
-            self.print('Set up process map with initializer')
+            self.system('Set up process map with initializer')
             p = ProcPool(
                 processes=cores,
                 initializer=shared_init,
                 initargs=shared_args)
 
         else:
-            self.print('Set up process map with no initializer')
+            self.system('Set up process map with no initializer')
             p = ProcPool(processes=cores)
 
         # Task generator expression
         genexpr = ([arg, self.subtask(name=name)] for arg in args)
 
-        self.print(
+        self.system(
             'Started process pool map with {i} processes'
-            .format(i=cores))
+            .format(i=cpu_count() if cores is None else cores))
         results = p.map(target, genexpr)
-        self.print('Finished map phase')
+        self.system('Finished map phase.')
 
         # Return immediately if no reducer required
         if reducer is None:
-            self.warn('No reducer supplied. Raw results returned.')
             return results
 
         # Create reducer subtask
@@ -155,7 +156,7 @@ class ParallelMixin:
                     for i in range(0, len(results), split)
                 ])
 
-            rtask.print('Finished round {i} of reduce'.format(i=rtask_rd))
+            rtask.system('Finished round {i} of reduce'.format(i=rtask_rd))
             rtask_rd += 1
 
         rtask.done(desc="Reduced results")

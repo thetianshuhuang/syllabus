@@ -1,26 +1,9 @@
 
 """Task reporting methods"""
 
-# Parameter generation
 import uuid
 import time
-
-# Thread management
-from threading import main_thread, Thread
-from queue import Empty as EmptyException
-from queue import Queue
-from multiprocessing import Manager
-
-# I/O
-import print as p
-import json
-
-# syllabus
-from .messages import TaskEvent, TaskError, TaskWarning
-
-# Log Entry namedtuple
-from collections import namedtuple
-LogEntry = namedtuple('LogEntry', ['time', 'log'])
+from .accounting import Accountant
 
 
 class ReporterMixin:
@@ -33,244 +16,120 @@ class ReporterMixin:
     desc : str or None
         Task description; if None, then defaults to
         '(no description available)' when displayed
-    tier : int
-        Tier hierarchy of this task
     root : bool
         True if this is the root task, and False otherwise
+    reporter : Accountant object
+        Reporter for task tracking
     mp : bool
         True if multiprocessing should be enabled (Manager.Queue used); False
         otherwise (normal Queue; to be used with threading)
-
-    Attributes
-    ----------
-    name, desc, tier : str, str/None, int
-        Set by initializer (see above)
-    start_time : float
-        Start time, in seconds (epoch time); if not started, None
-    end_time : float
-        End time, in seconds (epoch time); if not done, None
-    size : int
-        Size of registered objects, in bytes
-    children : dict
-        Dictionary of all created subtasks
-    id : str
-        Unique ID for this task
-    reporter : Queue
-        Reporting queue
-    log : list
-        List of LogEntry namedtuples
-    mp : bool
-        Multiprocessing enabled?
-    errors : str[]
-        List of errors
-    warnings : str[]
-        List of warnings
     """
 
     def __init__(
-            self, name='Task', desc=None, tier=0,
-            root=True, reporter=None, mp=False):
+            self, name='Task', desc=None, root=True, reporter=None, mp=False):
 
         # Display parameters
         self.name = name
         self.desc = desc
-        self.tier = tier
         self.root = root
 
-        # Generated parameters
+        # Generated Parameters
         self.start_time = None
         self.end_time = None
         self.size = 0
+
+        # Task tracking
         self.children = {}
         self.id = str(uuid.uuid4())
+
+        # Logging
         self.events = []
+
+        # Progress
+        self.tasks_done = 0
+        self.tasks = 0
 
         # Handle reporter
         self.mp = mp
         if root:
             # should not provide reporter
-            if reporter is not None:
-                raise Exception("Root Task should not have a reporter.")
-            self.accounting_init()
+            assert reporter is None, "Root task should not have a reporter."
+            self.accountant = Accountant(mp=mp, root=self.id)
+            self.reporter = self.accountant.queue
+            # Bind reporter methods
+            self.metadata = self.accountant.tree
+            self.json = self.accountant.json
+            self.save = self.accountant.save
+
         else:
             # Must have reporter
-            if reporter is None:
-                raise Exception("Non-root task must have a reporter.")
+            assert reporter is not None, "Non-root task must have a reporter"
             self.reporter = reporter
 
     #
-    # -- Reporting ------------------------------------------------------------
+    # -- Reporter -------------------------------------------------------------
     #
 
-    def acc_join(self):
-        """Spin-lock to wait for reporter print queue to empty"""
+    def __pass_or_get(self, target):
+        """Pass target or execute, if it is a function"""
 
-        time.sleep(0.1)
-        while not self.reporter.empty():
-            pass
-
-    def accounting_init(self):
-        """Initialize accounting thread"""
-
-        if self.mp:
-            self.reporter = Manager().Queue()
+        if hasattr(target, "__call__"):
+            return target()
         else:
-            self.reporter = Queue()
+            return target
 
-        def accounting_loop():
-            # Main thread must be alive
-            # Task must either still be running, or items left in the queue
-            while (
-                    main_thread().is_alive() and (
-                        self.end_time is None or
-                        self.reporter.qsize() > 0
-                    )):
-                self.accounting()
+    def update_metadata(self, *keys):
+        """Send metadata update to accounting thread
 
-        self.accounting_thread = Thread(target=accounting_loop)
-        self.accounting_thread.daemon = True
-        self.accounting_thread.start()
+        Parameters
+        ----------
+        *keys : str[]
+            List of keys to update
+        """
+        self.reporter.put({
+            "id": self.id,
+            "data": {
+                k: self.__pass_or_get(getattr(self, k))
+                for k in keys}
+        })
 
-    def accounting(self):
-        """Run one accounting iteration"""
+    def send_event(self, msg, event_type="info"):
+        """Send event to accounting thread
 
-        # Get next update
-        try:
-            update = self.reporter.get_nowait()
-        except EmptyException:
-            update = None
+        Parameters
+        ----------
+        msg : str or other PyObject
+            Object to send to accounting thread
+        event_type : "info", "error", or "warning"
+            Event type (for reporter formatting)
+        """
+        self.reporter.put({
+            "id": self.id,
+            "events": [{
+                "type": event_type,
+                "time": time.time(),
+                "body": msg}
+            ]})
 
-        #
-        # TODO: rewrite to tree-based approach
-        #
+    def info(self, msg):
+        """Send info message"""
+        self.send_event(msg, "info")
 
-        # Dict -> status update
-        if type(update) == dict:
-            self.update(update)
-        # Str -> print
-        elif type(update) == str:
-            p.print(update)
-        elif update is not None:
-            import os
-            # os.system('cls' if os.name == 'nt' else 'clear')
-            p.print(self.events)
-
-    #
-    # -- Console Interface ----------------------------------------------------
-    #
-
-    def print_raw(self, msg):
-        """Print message directly (to reporter thread)"""
-
-        self.reporter.put(msg)
-        self.events.append(msg)
-
-    def print(self, msg, rtier=1):
-        """Print message (adds header)"""
-
-        self.print_raw(TaskEvent(msg, tier=self.tier + rtier))
-
-    def about(self):
-        """Print task information"""
-
-        self.print_raw(TaskEvent(
-            "(no description available)" if self.desc is None
-            else self.desc, tier=self.tier))
+    def print(self, msg):
+        """Alias for info"""
+        self.send_event(msg, "info")
 
     def error(self, e):
         """Print error"""
-
-        self.print_raw(TaskError(e, tier=self.tier))
+        self.send_event(e, "error")
 
     def warn(self, e):
         """Print warning"""
+        self.send_event(e, "warning")
 
-        self.print_raw(TaskWarning(e, tier=self.tier))
-
-    #
-    # -- Metadata update and export -------------------------------------------
-    #
-
-    def metadata(self):
-        """Get metadata as a dictionary
-
-        Returns
-        -------
-        dict
-            Task metadata; follows child relationships recursively
-        """
-
-        return {
-            'start_time': self.start_time,
-            'end_time': self.end_time,
-            'runtime': self.runtime(),
-            'name': self.name,
-            'desc': self.desc,
-            'size': self.size,
-            'children': [child.metadata() for child in self.children.values()],
-            'tier': self.tier,
-            'id': self.id,
-        }
-
-    def update(self, metadata):
-        """Recursively update task and child tasks from a metadata dictionary
-
-        Parameters
-        ----------
-        metadata : dict
-            Updated information
-        """
-
-        self.start_time = metadata.get('start_time')
-        self.end_time = metadata.get('end_time')
-        self.name = metadata.get('name')
-        self.desc = metadata.get('desc')
-        self.size = metadata.get('size')
-        self.tier = metadata.get('tier')
-        self.id = str(metadata.get('id'))
-
-        for uid in metadata["children"]:
-            if uid in self.children:
-                self.children[uid].update(metadata["children"][uid])
-
-    def json(self, pretty=False):
-        """Get a json representation of the task's metadata
-
-        Parameters
-        ----------
-        pretty : bool
-            If True, a prettified json is returned. Otherwise, a minimal json
-            is created.
-
-        Returns
-        -------
-        json
-            Json output of metadata dict
-        """
-
-        if not hasattr(self, 'metadata'):
-            raise Exception(
-                "MetadataMixins must be used on a class with a 'metadata' "
-                "method")
-
-        if pretty:
-            return json.dumps(self.metadata(), indent=4, sort_keys=True)
-        else:
-            return json.dumps(self.metadata())
-
-    def save(self, file, pretty=False):
-        """Save metadata as a json to a file.
-
-        Parameters
-        ----------
-        file : str
-            File to save to
-        pretty : bool
-            Pretty or minimal json?
-        """
-
-        with open(file, 'w') as output:
-            output.write(self.json(pretty))
+    def system(self, e):
+        """System message"""
+        self.send_event(e, "system")
 
     #
     # -- Runtime --------------------------------------------------------------
@@ -307,3 +166,40 @@ class ReporterMixin:
             if child.end_time is not None:
                 done += 1
         return(done, len(self.children))
+
+    def progress(self):
+        """Get progress as a proportion
+
+        Returns
+        -------
+        float
+            Between 0 and 1; 0 if no tasks
+        """
+        if self.tasks == 0:
+            return 0
+        elif self.tasks_done > self.tasks:
+            return 1
+        else:
+            return self.tasks_done / self.tasks
+
+    def add_task(self, n):
+        """Add task to task counter
+
+        Parameters
+        ----------
+        n : int
+            Number of tasks to add
+        """
+        self.tasks += n
+        self.update_metadata("tasks")
+
+    def add_progress(self, n):
+        """Add to finished tasks counter
+
+        Parameters
+        ----------
+        n : int
+            Number of completed tasks to add
+        """
+        self.tasks_done += n
+        self.update_metadata("progress")

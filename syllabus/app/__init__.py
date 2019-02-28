@@ -1,4 +1,4 @@
 
-from .app import Syllabus
+# from .task_app import SyllabusApp
 
-__all__ = ["Syllabus"]
+# __all__ = ["SyllabusApp"]

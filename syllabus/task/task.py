@@ -27,7 +27,7 @@ class Task(ReporterMixin, ParallelMixin):
         if desc is not None:
             self.desc = desc
 
-    def start(self, name=None, desc=None, silent=False):
+    def start(self, name=None, desc=None):
         """Start the Task tracker
 
         Parameters
@@ -36,8 +36,6 @@ class Task(ReporterMixin, ParallelMixin):
             Name to set
         desc : str or None
             Description to set
-        silent : bool
-            If True, no status is printed out
 
         Returns
         -------
@@ -47,13 +45,11 @@ class Task(ReporterMixin, ParallelMixin):
 
         self.__update_name(name=name, desc=desc)
         self.start_time = time.time()
-
-        if not silent:
-            self.print(self.desc, rtier=0)
+        self.update_metadata("start_time", "name", "desc")
 
         return self
 
-    def done(self, *objects, name=None, desc=None, silent=False, join=False):
+    def done(self, *objects, name=None, desc=None, nowait=False):
         """Mark the current task as 'done'
 
         Parameters
@@ -66,26 +62,16 @@ class Task(ReporterMixin, ParallelMixin):
         desc : str or None
             Description to set (perhaps you want to change the description to
             reflect the status -- 'loading images' -> 'loaded images')
-        silent : bool
-            If True, no status is printed out.
-        join : bool
-            If True, spins until the task is completely cleared.
         """
 
         self.size = sum(sys.getsizeof(obj) for obj in objects)
 
         self.__update_name(name=name, desc=desc)
         self.end_time = time.time()
+        self.update_metadata("size", "end_time", "name", "desc")
 
-        if not silent:
-            self.print_raw(
-                p.render("  | " * self.tier, p.BR + p.BLACK) +
-                p.render(self.__str__(), p.BR + p.GREEN, p.BOLD))
-
-        if join:
-            if hasattr(self, "accounting_thread"):
-                while self.accounting_thread.is_alive():
-                    pass
+        if self.root:
+            self.accountant.stop(nowait)
 
     def subtask(self, name='Child Task', desc=None):
         """Create a subtask
@@ -106,11 +92,15 @@ class Task(ReporterMixin, ParallelMixin):
         new_task = Task(
             name=name,
             desc=desc,
-            tier=self.tier + 1,
             reporter=self.reporter,
             root=False,
             mp=self.mp)
         self.children[new_task.id] = new_task
+
+        self.reporter.put({
+            "id": self.id,
+            "children": [new_task.id]
+        })
 
         return new_task
 
