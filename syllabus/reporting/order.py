@@ -1,10 +1,3 @@
-from .task import Task
-import threading
-import print as p
-import os
-import time
-from .units import size_fmt, time_fmt
-from .utils import format_line
 
 
 def ordered_tree(tree, indent=0):
@@ -33,6 +26,9 @@ def ordered_tree(tree, indent=0):
         "start_time": tree.get("start_time"),
         "end_time": tree.get("end_time")})]
 
+    if "children" not in tree:
+        return ordered
+
     orderables = [
         c for c in tree["children"] if c.get("start_time") is not None
     ] + tree["events"]
@@ -51,28 +47,3 @@ def ordered_tree(tree, indent=0):
             }))
 
     return ordered
-
-
-class TaskApp(Task):
-
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        t = threading.Thread(target=self.__app_update)
-        t.start()
-
-    def __app_update(self):
-
-        print("started")
-
-        while threading.main_thread().is_alive() and self.end_time is None:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            p.print(self.render_tree())
-            time.sleep(0.1)
-
-    def render_tree(self):
-
-        return '\n'.join([
-            format_line(line)
-            for line in ordered_tree(self.accountant.tree())])

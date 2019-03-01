@@ -2,7 +2,7 @@
 
 try:
     import msvcrt
-    getch = msvcrt.getch()
+    getch = msvcrt.getch
 except ImportError:
     try:
         import Carbon

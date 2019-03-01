@@ -3,11 +3,10 @@
 
 import sys
 import time
-import print as p
 
-from .units import size_fmt, time_fmt
-from .reporter_mixins import ReporterMixin
-from .parallel_mixins import ParallelMixin
+from .format import size_fmt, time_fmt
+from .reporting import ReporterMixin
+from .parallel import ParallelMixin
 
 
 class Task(ReporterMixin, ParallelMixin):

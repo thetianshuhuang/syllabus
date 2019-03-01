@@ -3,7 +3,7 @@
 
 import uuid
 import time
-from .accounting import Accountant
+from .accountant import Accountant
 
 
 class ReporterMixin:

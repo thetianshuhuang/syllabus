@@ -71,7 +71,7 @@ def run_tests(modules):
 
 if __name__ == "__main__":
 
-    from accounting import tests
+    from reporting import tests
     # Add more modules here
     # Ex.
     # import foo

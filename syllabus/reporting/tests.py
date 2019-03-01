@@ -3,6 +3,7 @@
 from print import print
 import unittest
 from .accountant import Accountant
+from .order import ordered_tree
 
 
 class Tests(unittest.TestCase):
@@ -72,7 +73,7 @@ class Tests(unittest.TestCase):
             ]
         })
 
-        self.assertEqual(accountant.ordered_tree(), [
+        self.assertEqual(ordered_tree(accountant.tree()), [
             (0, {
                 'id': 'test-root',
                 'progress': 0.521,
@@ -103,17 +104,10 @@ class Tests(unittest.TestCase):
                 'end_time': None})
         ])
 
-        print(
-            "\n\n"
-            "Accountant Output -- Verify Manually\n"
-            "------------------------------------\n\n")
-        print(accountant.render_tree())
-        print("\n\n")
-
         accountant.stop()
         self.assertTrue(accountant.stopped)
 
-    def test_circular_and_undefined(self):
+    def test_circular(self):
 
         accountant = Accountant(root='root')
         q = accountant.queue
@@ -122,14 +116,13 @@ class Tests(unittest.TestCase):
             "id": 'root',
             "data": {'is_root': True},
             "events": [],
-            "children": ['undefined-child', 'root']})
+            "children": ['root']})
 
         self.assertEqual(accountant.tree(), {
             "id": "root",
             "is_root": True,
             "events": [],
             "children": [
-                {"id": "undefined-child"},
                 {"id": "root"},
             ]
         })

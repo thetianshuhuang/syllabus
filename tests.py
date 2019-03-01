@@ -51,25 +51,27 @@ def expensive_proctask(x):
 
 if __name__ == "__main__":
 
-    from print import argparse
+    import sys
+    if len(sys.argv) > 2 and sys.argv[1] == '-mp':
+        # Multiprocessing - must have mp=True enabled to use multiprocessing
+        main2 = TaskApp(
+            "MP-enabled Main Task", desc='mp=True', mp=True).start()
+        main2.pool(expensive_proctask, [i for i in range(10)], process=True)
+        main2.done()
 
-    # Initialize task; note the .start() called at the end
-    main = TaskApp("Main Task", desc='the main task', mp=False).start()
+    else:
+        # Initialize task; note the .start() called at the end
+        main = TaskApp("Main Task", desc='the main task', mp=False).start()
 
-    # Single-threaded
-    st1 = main.subtask("Task #1", desc='first subtask')
-    expensive_task(5, task=st1)
-    st2 = main.subtask("Task #2", desc='first subtask')
-    expensive_task(10, task=st2)
-    cheap_task(0, task=main.subtask("Task #3"))
-    cheap_task(1, task=main.subtask("Task #4"))
+        # Single-threaded
+        st1 = main.subtask("Task #1", desc='first subtask')
+        expensive_task(5, task=st1)
+        st2 = main.subtask("Task #2", desc='first subtask')
+        expensive_task(10, task=st2)
+        cheap_task(0, task=main.subtask("Task #3"))
+        cheap_task(1, task=main.subtask("Task #4"))
 
-    # Multithreading
-    main.pool(expensive_task, [i for i in range(10)], process=False)
+        # Multithreading
+        main.pool(expensive_task, [i for i in range(10)], process=False)
 
-    main.done()
-
-    # Multiprocessing - must have mp=True enabled to use multiprocessing
-    main2 = TaskApp("MP-enabled Main Task", desc='mp=True', mp=True).start()
-    main2.pool(expensive_proctask, [i for i in range(10)], process=True)
-    main2.done()
+        main.done()

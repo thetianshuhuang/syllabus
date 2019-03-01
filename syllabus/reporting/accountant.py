@@ -81,8 +81,8 @@ class Accountant(threading.Thread):
 
     def __add_new(self, uid):
         """Add blank task"""
-        self.task_log[uid] = {
-            "events": [], "children": [], "id": uid}
+        if uid not in self.task_log:
+            self.task_log[uid] = {"events": [], "children": [], "id": uid}
 
     def accounting(self):
         """Run accounting loop; called by run"""
@@ -91,6 +91,9 @@ class Accountant(threading.Thread):
             update = self.queue.get_nowait()
         except EmptyException:
             return
+
+        import time
+        st = time.time()
 
         if self.root is None:
             self.root = update.id
@@ -107,7 +110,7 @@ class Accountant(threading.Thread):
             for child in update["children"]:
                 self.__add_new(child)
 
-    def tree(self, root=None, nowait=True, previous=None):
+    def tree(self, root=None, nowait=False, previous=None):
         """Get task tree as dict
 
         Parameters
