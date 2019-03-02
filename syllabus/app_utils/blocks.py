@@ -45,7 +45,10 @@ def pad(val, length):
 
 def wrap(text, width):
 
+    return [text]
+
     idt = len(text) - len(text.lstrip())
 
     return [
-        ' ' * idt + row for row in textwrap.wrap(text.lstrip(), width - idt)]
+        ' ' * idt + row
+        for row in textwrap.wrap(text.lstrip(), width - idt - 1)]

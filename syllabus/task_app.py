@@ -15,7 +15,7 @@ __author__ = 'Tianshu Huang'
 
 class TaskApp(Task):
 
-    def __init__(self, *args, refresh_rate=20, **kwargs):
+    def __init__(self, *args, refresh_rate=10, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -25,11 +25,11 @@ class TaskApp(Task):
         self.__app_thread = threading.Thread(target=self.__app_update)
         self.__app_thread.start()
 
-        self.__kb_thread = threading.Thread(target=self.__kb_update)
-        self.__kb_thread.start()
+        # self.__kb_thread = threading.Thread(target=self.__kb_update)
+        # self.__kb_thread.start()
 
     def draw(self):
-        # os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
 
         height = get_terminal_size().lines - 3
         width = get_terminal_size().columns
@@ -38,10 +38,14 @@ class TaskApp(Task):
         for line in self.render_tree().split('\n'):
             content += wrap(line, width)
 
-        idx = min(max(self.__log_idx, 0), max(len(content) - height + 1, 0))
+        idx = len(content) - height
+        # idx = min(max(self.__log_idx, 0), max(len(content) - height + 1, 0))
 
         header()
-        p.print('\n'.join(content[idx:idx + height]))
+        # p.print('\n'.join(content[idx:idx + height]))
+        p.print('\n'.join(content[idx: idx + height]))
+        if len(content) - idx < height:
+            print('\n' * (height - len(content) + idx - 1))
         footer()
 
     def __app_update(self):
@@ -60,7 +64,7 @@ class TaskApp(Task):
     def __kb_update(self):
 
         while threading.main_thread().is_alive():
-            ch = getch().decode('utf-8')
+            ch = getch()
 
             if ch == 'w':
                 self.__set_log_idx(-1)

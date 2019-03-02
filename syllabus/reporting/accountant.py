@@ -39,6 +39,7 @@ class Accountant(threading.Thread):
             self.queue = Queue()
 
         self.task_log = {}
+        self.task_log_mutex = threading.Lock()
         self.root = root
 
         self.__stop_request = False
@@ -92,8 +93,7 @@ class Accountant(threading.Thread):
         except EmptyException:
             return
 
-        import time
-        st = time.time()
+        self.task_log_mutex.acquire(True)
 
         if self.root is None:
             self.root = update.id
@@ -110,7 +110,9 @@ class Accountant(threading.Thread):
             for child in update["children"]:
                 self.__add_new(child)
 
-    def tree(self, root=None, nowait=False, previous=None):
+        self.task_log_mutex.release()
+
+    def tree(self, root=None, nowait=True, previous=None):
         """Get task tree as dict
 
         Parameters
@@ -141,7 +143,13 @@ class Accountant(threading.Thread):
 
         # no root -> base case
         if root is None:
-            return {} if self.root is None else self.tree(self.root)
+            if self.root is None:
+                return {}
+            else:
+                self.task_log_mutex.acquire()
+                ret = self.tree(self.root, nowait=True)
+                self.task_log_mutex.release()
+                return ret
         # key not present or already visited -> return empty
         elif root not in self.task_log or root in previous:
             return {'id': root}
@@ -150,7 +158,7 @@ class Accountant(threading.Thread):
             previous.append(root)
             return {
                 k: v if k != 'children' else [
-                    self.tree(c, previous=previous)
+                    self.tree(c, previous=previous, nowait=True)
                     for c in self.task_log[root]['children']]
                 for k, v in self.task_log[root].items()
             }

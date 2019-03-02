@@ -52,11 +52,15 @@ def expensive_proctask(x):
 if __name__ == "__main__":
 
     import sys
-    if len(sys.argv) > 2 and sys.argv[1] == '-mp':
+    if len(sys.argv) >= 2 and sys.argv[1] == '-mp':
         # Multiprocessing - must have mp=True enabled to use multiprocessing
         main2 = TaskApp(
             "MP-enabled Main Task", desc='mp=True', mp=True).start()
         main2.pool(expensive_proctask, [i for i in range(10)], process=True)
+
+        main2.pool(
+            expensive_proctask, [i for i in range(10)],
+            process=True, cores=2)
         main2.done()
 
     else:
