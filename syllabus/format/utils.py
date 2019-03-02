@@ -25,7 +25,8 @@ MSG_HEADERS = {
     "error": p.render("[ERROR]", p.BR + p.RED, p.BOLD),
     "warning": p.render("[WARNING]", p.BR + p.YELLOW, p.BOLD),
     "info": p.render("[info]", p.BR + p.BLUE, p.BOLD),
-    "system": p.render("[system]", p.BR + p.CYAN, p.BOLD)
+    "system": p.render("[system]", p.BR + p.CYAN, p.BOLD),
+    "root": p.render("[system]", p.BR + p.CYAN, p.BOLD),
 }
 
 INDENT = " |  "
@@ -74,6 +75,8 @@ def format_line(line):
     """
 
     idt, d = line
+    if "type" in d and d["type"] == "root":
+        idt = idt - 1
     ret = p.render(INDENT * idt, p.BLACK + p.BR, p.BOLD)
 
     # Task

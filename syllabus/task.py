@@ -70,6 +70,7 @@ class Task(ReporterMixin, ParallelMixin):
         self.update_metadata("size", "end_time", "name", "desc")
 
         if self.root:
+            self.system_root("Main task finished.")
             self.accountant.stop(nowait)
 
     def subtask(self, name='Child Task', desc=None):

@@ -29,42 +29,56 @@ class TaskApp(Task):
         # self.__kb_thread.start()
 
     def draw(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
 
-        height = get_terminal_size().lines - 3
+        height = get_terminal_size().lines - 4
         width = get_terminal_size().columns
 
         content = []
         for line in self.render_tree().split('\n'):
             content += wrap(line, width)
 
-        idx = len(content) - height
-        # idx = min(max(self.__log_idx, 0), max(len(content) - height + 1, 0))
+        idx = min(max(self.__log_idx, 0), max(len(content) - height + 1, 0))
 
+        body_len = len(content)
+        body = '\n'.join(content[idx: idx + height])
+
+        if body_len - idx < height:
+            body += '\n' * (height - body_len + idx - 1)
+
+        # t = time.time()
+        # os.system('cls' if os.name == 'nt' else 'clear')
+        # print(time.time() - t)
         header()
         # p.print('\n'.join(content[idx:idx + height]))
-        p.print('\n'.join(content[idx: idx + height]))
-        if len(content) - idx < height:
-            print('\n' * (height - len(content) + idx - 1))
+        t = time.time()
+        p.print(body)
+        print(time.time() - t)
         footer()
 
     def __app_update(self):
 
-        while threading.main_thread().is_alive():
+        while threading.main_thread().is_alive() and self.end_time is None:
             self.draw()
             time.sleep(1 / self.__refresh_rate)
 
     def __set_log_idx(self, new, relative=True):
 
         if relative:
-            self.__log_idx += new
+            if self.__log_idx != 0 or new >= 0:
+                self.__log_idx += new
         else:
             self.__log_idx = new
 
     def __kb_update(self):
 
-        while threading.main_thread().is_alive():
+        while threading.main_thread().is_alive() and self.end_time is None:
             ch = getch()
+
+            if type(ch) == bytes:
+                try:
+                    ch = ch.decode('utf-8')
+                except Exception as e:
+                    ch = None
 
             if ch == 'w':
                 self.__set_log_idx(-1)

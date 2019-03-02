@@ -131,6 +131,10 @@ class ReporterMixin:
         """System message"""
         self.send_event(e, "system")
 
+    def system_root(self, e):
+        """Root system message"""
+        self.send_event(e, "root")
+
     #
     # -- Runtime --------------------------------------------------------------
     #
