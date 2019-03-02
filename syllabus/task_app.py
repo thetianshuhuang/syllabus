@@ -1,13 +1,12 @@
 from .task import Task
 import threading
-import print as p
 import os
 import time
 from .format import format_line
 from .reporting import ordered_tree
 from .app_utils import getch, header, footer, wrap
 from shutil import get_terminal_size
-
+import print as p
 
 __version__ = 'v1.0'
 __author__ = 'Tianshu Huang'
@@ -15,7 +14,7 @@ __author__ = 'Tianshu Huang'
 
 class TaskApp(Task):
 
-    def __init__(self, *args, refresh_rate=10, **kwargs):
+    def __init__(self, *args, refresh_rate=20, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -30,7 +29,7 @@ class TaskApp(Task):
 
     def draw(self):
 
-        height = get_terminal_size().lines - 4
+        height = get_terminal_size().lines - 3
         width = get_terminal_size().columns
 
         content = []
@@ -43,23 +42,19 @@ class TaskApp(Task):
         body = '\n'.join(content[idx: idx + height])
 
         if body_len - idx < height:
-            body += '\n' * (height - body_len + idx - 1)
+            body += '\n' * (height - body_len + idx + 1)
 
-        # t = time.time()
-        # os.system('cls' if os.name == 'nt' else 'clear')
-        # print(time.time() - t)
-        header()
-        # p.print('\n'.join(content[idx:idx + height]))
-        t = time.time()
-        p.print(body)
-        print(time.time() - t)
-        footer()
+        os.system('cls' if os.name == 'nt' else 'clear')
+        # header()
+        p.print(self.render_tree())
+        # footer()
 
     def __app_update(self):
 
         while threading.main_thread().is_alive() and self.end_time is None:
             self.draw()
             time.sleep(1 / self.__refresh_rate)
+        self.draw()
 
     def __set_log_idx(self, new, relative=True):
 
@@ -91,6 +86,8 @@ class TaskApp(Task):
             elif ch == 'q' or ch == 'Q':
                 self.system("stopping ...")
                 self.done()
+
+            self.draw()
 
     def render_tree(self):
 
