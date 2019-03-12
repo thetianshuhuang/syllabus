@@ -1,7 +1,15 @@
 
 
 from .task import Task
-from .task_app import TaskApp
+from .basic import BasicTaskApp
+from .interactive import InteractiveTaskApp
 from .argv import Param, Config, ArgException
 
-__all__ = ["Task", "Param", "Config", "ArgException", "TaskApp"]
+__all__ = [
+	"Task",
+	"Param",
+	"Config",
+	"ArgException",
+	"BasicTaskApp", 
+	"InteractiveTaskApp"
+]

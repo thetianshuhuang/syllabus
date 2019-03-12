@@ -2,7 +2,8 @@
 """Tests and examples for SYLLABUS"""
 
 import time
-from syllabus import Task, TaskApp
+import print as p
+from syllabus import Task, BasicTaskApp, InteractiveTaskApp
 
 
 def cheap_task(arg, task=None):
@@ -51,10 +52,15 @@ def expensive_proctask(x):
 
 if __name__ == "__main__":
 
-    import sys
-    if len(sys.argv) >= 2 and sys.argv[1] == '-mp':
+    if p.argparse.is_flag('i'):
+        AppClass = InteractiveTaskApp
+    else:
+        AppClass = BasicTaskApp
+
+
+    if p.argparse.is_flag('m'):
         # Multiprocessing - must have mp=True enabled to use multiprocessing
-        main2 = TaskApp(
+        main2 = AppClass(
             "MP-enabled Main Task", desc='mp=True', mp=True).start()
 
         main2.pool(expensive_proctask, [i for i in range(10)], process=True)
@@ -64,9 +70,16 @@ if __name__ == "__main__":
 
         main2.done()
 
+    elif p.argparse.is_flag('l'):
+
+        main = AppClass("Main Task", desc=' the main task', mp=False).start()
+        for i in range(1000):
+            expensive_task(i, task=main.subtask("Subtask #{i}".format(i=i)))
+        main.done()
+
     else:
         # Initialize task; note the .start() called at the end
-        main = TaskApp("Main Task", desc='the main task', mp=False).start()
+        main = AppClass("Main Task", desc='the main task', mp=False).start()
 
         # Single-threaded
         st1 = main.subtask("Task #1", desc='first subtask')

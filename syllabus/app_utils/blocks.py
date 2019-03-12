@@ -21,7 +21,7 @@ def span(left, right, *args):
 
 def header():
 
-    print(span(
+    return (span(
         render("  Syllabus | Console App  ", BG + WHITE, BLACK),
         render("  {a}  ".format(a=AUTHOR), BG + WHITE, BLACK) +
         render("  {v}  ".format(v=VERSION), BG + BLUE, BR + WHITE),
@@ -30,7 +30,7 @@ def header():
 
 def footer():
 
-    print(span(
+    return (span(
         render('  Event Log  ', BG + WHITE, BLACK),
         render(
             "[W] Up  [S] Down  [Shift+W] Top  [Shift+S] Bottom ",

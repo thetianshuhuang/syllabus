@@ -24,6 +24,7 @@ except ImportError:
         import sys
         import tty
         import termios
+        import select
 
         def getch():
             fd = sys.stdin.fileno()
@@ -34,7 +35,7 @@ except ImportError:
             finally:
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-            if ord(ch) == 3:
+            if len(ch) > 0 and ord(ch) == 3:
                 raise KeyboardInterrupt
 
             return ch
