@@ -1,6 +1,8 @@
 # Syllabus
 Time and memory tracking task manager for Machine Learning applications
 
+![Print It!](https://github.com/thetianshuhuang/syllabus/blob/master/basic.png)
+
 ## Dependencies
 - Python 3
 - print
