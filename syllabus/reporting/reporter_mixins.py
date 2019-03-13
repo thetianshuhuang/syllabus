@@ -1,4 +1,3 @@
-
 """Task reporting methods"""
 
 import uuid

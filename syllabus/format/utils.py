@@ -1,3 +1,4 @@
+"""Terminal app utilities"""
 
 import time
 import print as p

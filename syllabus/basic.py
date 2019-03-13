@@ -49,4 +49,4 @@ class BasicTaskApp(Task):
 
         return '\n'.join([
             format_line(line)
-            for line in ordered_tree(self.accountant.tree())])
+            for line in ordered_tree(self.metadata())])

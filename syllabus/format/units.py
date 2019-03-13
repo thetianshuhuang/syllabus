@@ -1,4 +1,12 @@
+"""Unit formatting
 
+Attributes
+----------
+SIZE_UNITS: [(int, str)]
+    [(Lower bound, unit name)]
+TIME_UNITS: [(int, str)]
+    [(Lower bound, unit name)]
+"""
 
 SIZE_UNITS = [
     (10**21, 'ZB'), (10**18, 'EB'),

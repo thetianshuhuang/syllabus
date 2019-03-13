@@ -1,10 +1,4 @@
-"""Task Accountant (and accessories)
-
-Usage
------
-
-
-"""
+"""Task Accountant (and accessories)"""
 
 # I/O
 import json
