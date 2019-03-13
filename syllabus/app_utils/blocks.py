@@ -1,5 +1,15 @@
+"""Interactive App Blocks
+
+Attributes
+----------
+AUTHOR : str
+    Author text; shown at top right
+VERSION : str
+    Version text; shown at top right in blue highlight
+"""
+
 from print import *
-import textwrap
+import ansiwrap
 import re
 from shutil import get_terminal_size
 
@@ -9,17 +19,41 @@ VERSION = "v1.0"
 
 
 def screen_len(text):
+    """Length of text on screen
+
+    Parameters
+    ----------
+    text : str
+        Text to measure
+
+    Returns
+    -------
+    int
+        Length of text with non-visible characters removed
+    """
 
     return len(re.sub(r'\x1B\[[0-?]*[ -/]*[@-~]', '', text))
 
 
 def span(left, right, *args):
+    """Span two blocks of text
+
+    Parameters
+    ----------
+    left : str
+        Left aligned text
+    right : str
+        Right aligned text
+    *args : int, str
+        List of format settings for print.render
+    """
 
     pad = get_terminal_size().columns - screen_len(left) - screen_len(right)
     return render(left + render(' ' * pad, *args) + right)
 
 
 def header():
+    """Interactive app header"""
 
     return (span(
         render("  Syllabus | Console App  ", BG + WHITE, BLACK),
@@ -29,6 +63,7 @@ def header():
 
 
 def footer():
+    """Interactive app footer"""
 
     return (span(
         render('  Event Log  ', BG + WHITE, BLACK),
@@ -39,16 +74,42 @@ def footer():
 
 
 def pad(val, length):
+    """Pad text with blank spaces
+
+    Parameters
+    ----------
+    val : str
+        Base text
+    length : int
+        Width to pad to
+
+    Returns
+    -------
+    str
+        Formatted line
+    """
 
     return str(val) + ' ' * (length - len(str(val)))
 
 
 def wrap(text, width):
+    """Wrap text
 
-    return [text]
+    Parameters
+    ----------
+    text : str
+        input text
+    width : int
+        target width
 
-    idt = len(text) - len(text.lstrip())
+    Returns
+    -------
+    str[]
+        List of lines
+    """
 
-    return [
-        ' ' * idt + row
-        for row in textwrap.wrap(text.lstrip(), width - idt - 1)]
+    a, b = re.search(r'^( \|  )*', text).span()
+    idt = text[:b]
+    text = text[b:]
+
+    return [idt + s for s in ansiwrap.wrap(text, width - len(idt))]

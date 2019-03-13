@@ -196,4 +196,4 @@ class Accountant(threading.Thread):
             Pretty or minimal json?
         """
         with open(file, 'w') as output:
-            output.write(self.json(pretty))
+            output.write(self.json(pretty=pretty))

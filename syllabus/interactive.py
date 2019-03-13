@@ -43,7 +43,9 @@ class InteractiveTaskApp(Task):
         if self.__stuck_to_bottom:
             idx = max(0, len(content) - height + 2)
         else:
-            idx = min(max(self.__log_idx, 0), max(len(content) - height + 2, 0))
+            idx = min(
+                max(self.__log_idx, 0),
+                max(len(content) - height + 2, 0))
 
         # Assemble contents
         body_len = len(content)

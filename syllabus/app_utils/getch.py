@@ -1,4 +1,7 @@
+"""Get Character Input
 
+Creates "getch" function, with different structure depending on the OS.
+"""
 
 try:
     import msvcrt
@@ -24,7 +27,6 @@ except ImportError:
         import sys
         import tty
         import termios
-        import select
 
         def getch():
             fd = sys.stdin.fileno()

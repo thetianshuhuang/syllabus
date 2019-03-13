@@ -77,7 +77,7 @@ def format_line(line):
     idt, d = line
     if "type" in d and d["type"] == "root":
         idt = idt - 1
-    ret = p.render(INDENT * idt, p.BLACK + p.BR, p.BOLD)
+    ret = INDENT * idt
 
     # Task
     if 'id' in d:

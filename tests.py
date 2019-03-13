@@ -57,7 +57,6 @@ if __name__ == "__main__":
     else:
         AppClass = BasicTaskApp
 
-
     if p.argparse.is_flag('m'):
         # Multiprocessing - must have mp=True enabled to use multiprocessing
         main2 = AppClass(
@@ -69,6 +68,7 @@ if __name__ == "__main__":
             process=True, cores=2)
 
         main2.done()
+        main2.save("tmp.json", pretty=True)
 
     elif p.argparse.is_flag('l'):
 
@@ -76,6 +76,7 @@ if __name__ == "__main__":
         for i in range(1000):
             expensive_task(i, task=main.subtask("Subtask #{i}".format(i=i)))
         main.done()
+        main.save("tmp.json", pretty=True)
 
     else:
         # Initialize task; note the .start() called at the end
@@ -93,3 +94,4 @@ if __name__ == "__main__":
         main.pool(expensive_task, [i for i in range(10)], process=False)
 
         main.done()
+        main.save("tmp.json", pretty=True)
