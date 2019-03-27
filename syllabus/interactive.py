@@ -1,16 +1,32 @@
-from .task import Task
+"""Interactive Terminal App"""
+
+# Main loop control
 import threading
-import os
 import time
+
+# Output
+import os
+import print as p
+
+# Output Formatting
+from shutil import get_terminal_size
+import re
+
+# Dependencies
+from .task import Task
 from .format import format_line
 from .reporting import ordered_tree
 from .app_utils import getch, header, footer, wrap
-from shutil import get_terminal_size
-import print as p
-import re
 
 
 class InteractiveTaskApp(Task):
+    """Interactive terminal app
+
+    Parameters
+    ----------
+    refresh_rate : float
+        Output refresh rate, in Hz
+    """
 
     def __init__(self, *args, refresh_rate=20, **kwargs):
 
@@ -27,6 +43,7 @@ class InteractiveTaskApp(Task):
         self.__kb_thread.start()
 
     def draw(self):
+        """Draw terminal app"""
 
         height = get_terminal_size().lines - 3
         width = get_terminal_size().columns
@@ -62,6 +79,7 @@ class InteractiveTaskApp(Task):
         p.print(body)
 
     def __app_update(self):
+        """App update loop"""
 
         while threading.main_thread().is_alive() and self.end_time is None:
             self.draw()
@@ -69,6 +87,16 @@ class InteractiveTaskApp(Task):
         self.draw()
 
     def __set_log_idx(self, new, relative=True):
+        """Set current index
+
+        Parameters
+        ----------
+        new : int
+            New index
+        relative : bool
+            if True, new is added to the current; if False, the index is
+            overwritten
+        """
 
         if relative:
             if self.__log_idx != 0 or new >= 0:
@@ -77,6 +105,7 @@ class InteractiveTaskApp(Task):
             self.__log_idx = new
 
     def __kb_update(self):
+        """Keyboard update loop"""
 
         while threading.main_thread().is_alive() and self.end_time is None:
 
@@ -101,7 +130,14 @@ class InteractiveTaskApp(Task):
                 self.__set_log_idx(-1, relative=False)
 
     def render_tree(self):
+        """Render task tree
+
+        Returns
+        -------
+        str
+            Rendered tree
+        """
 
         return '\n'.join([
             format_line(line)
-            for line in ordered_tree(self.accountant.tree())])
+            for line in ordered_tree(self.metadata())])

@@ -1,3 +1,4 @@
+"""Convert task tree to ordered line-by-line representation"""
 
 
 def ordered_tree(tree, indent=0):
