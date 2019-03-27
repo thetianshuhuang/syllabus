@@ -1,12 +1,23 @@
 # Syllabus
 Time and memory tracking task manager for Machine Learning applications
 
-![Print It!](https://github.com/thetianshuhuang/syllabus/blob/master/basic.png)
+![](https://github.com/thetianshuhuang/syllabus/blob/master/basic.png)
 
 ## Dependencies
 - Python 3
 - print
 - ansiwrap
+
+## Installation
+Install with
+```shell
+pip install printtools
+```
+
+For the latest version, clone this repository and use
+```shell
+python3 setup.py install
+```
 
 ## Requirements
 - min terminal width of 66 columns
