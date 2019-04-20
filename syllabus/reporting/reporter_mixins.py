@@ -190,7 +190,7 @@ class ReporterMixin:
 
         Parameters
         ----------
-        n : int
+        n : int or float
             Number of tasks to add
         """
         self.tasks += n
@@ -201,8 +201,19 @@ class ReporterMixin:
 
         Parameters
         ----------
-        n : int
+        n : int or float
             Number of completed tasks to add
         """
         self.tasks_done += n
+        self.update_metadata("progress")
+
+    def set_progress(self, n):
+        """Set the finished tasks counter directly
+
+        Parameters
+        ----------
+        n : int or float
+            Set tasks
+        """
+        self.tasks_done = n
         self.update_metadata("progress")
