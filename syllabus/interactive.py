@@ -28,11 +28,15 @@ class InteractiveTaskApp(Task):
         Output refresh rate, in Hz
     """
 
+    __NOCURSOR = '  '
+    __CURSOR = ' >'
+
     def __init__(self, *args, refresh_rate=20, **kwargs):
 
         super().__init__(*args, **kwargs)
 
         self.__log_idx = 0
+        self.__cursor = 0
         self.__stuck_to_bottom = False
         self.__refresh_rate = refresh_rate
 
@@ -56,9 +60,12 @@ class InteractiveTaskApp(Task):
         # Compute and update index
         if self.__log_idx == -1:
             self.__log_idx = max(0, len(content) - height + 2)
+        if self.__cursor == -1 or self.__cursor >= len(content):
+            self.__cursor = len(content) - 1
 
         if self.__stuck_to_bottom:
             idx = max(0, len(content) - height + 2)
+            self.__cursor = max(0, len(content) - 1)
         else:
             idx = min(
                 max(self.__log_idx, 0),
@@ -98,11 +105,15 @@ class InteractiveTaskApp(Task):
             overwritten
         """
 
+        # Index
         if relative:
             if self.__log_idx != 0 or new >= 0:
                 self.__log_idx += new
+            if self.__cursor != 0 or new >= 0:
+                self.__cursor += new
         else:
             self.__log_idx = new
+            self.__cursor = new
 
     def __kb_update(self):
         """Keyboard update loop"""
@@ -128,6 +139,8 @@ class InteractiveTaskApp(Task):
             elif ch == 'S':
                 self.__stuck_to_bottom = True
                 self.__set_log_idx(-1, relative=False)
+            elif ch == ' ':
+                pass
 
             time.sleep(0.05)
 
@@ -141,5 +154,6 @@ class InteractiveTaskApp(Task):
         """
 
         return '\n'.join([
-            '  ' + format_line(line)
-            for line in ordered_tree(self.metadata())])
+            (self.__NOCURSOR if idx != self.__cursor else self.__CURSOR) +
+            format_line(line)
+            for idx, line in enumerate(ordered_tree(self.metadata()))])

@@ -68,7 +68,7 @@ def footer():
     return (span(
         render('  Event Log  ', BG + WHITE, BLACK),
         render(
-            "[W] Up  [S] Down  [Shift+W] Top  [Shift+S] Bottom ",
+            "[W] Up  [S] Down  [Shift+W] Top  [Shift+S] Bottom [Space] Toggle",
             BG + WHITE, BLACK),
         BG + WHITE))
 
