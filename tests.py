@@ -93,6 +93,16 @@ if __name__ == "__main__":
         main.done()
         main.save("tmp.json", pretty=True)
 
+    elif p.argparse.is_flag('s'):
+        main = AppClass(
+            "Main Task", desc="the main task", mp=False,
+            refresh_rate=REFRESH_RATE).start()
+        for i in range(10):
+            cheap_task(i, task=main.subtask("Cheap task"))
+        for i in range(100):
+            expensive_task(i, task=main.subtask("Expensive task"))
+        main.done()
+        main.save("tmp.json", pretty=True)
     else:
         # Initialize task; note the .start() called at the end
         main = AppClass(

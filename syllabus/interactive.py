@@ -58,25 +58,33 @@ class InteractiveTaskApp(Task):
             content += wrap(line, width)
 
         # Compute and update index
-        if self.__log_idx == -1:
-            self.__log_idx = max(0, len(content) - height + 2)
-        if self.__cursor == -1 or self.__cursor >= len(content):
-            self.__cursor = len(content) - 1
+        max_log_idx = max(0, len(content) - height + 2)
 
-        if self.__stuck_to_bottom:
-            idx = max(0, len(content) - height + 2)
+        # Index = -1 (jump to bottom) or index greater than allowed or
+        # sticky bottom enabled => set to greatest allowed
+        if (
+                self.__log_idx < 0 or
+                self.__log_idx > max_log_idx or
+                self.__stuck_to_bottom):
+            self.__log_idx = max_log_idx
+        # Cursor = -1 (jump to bottom) or cursor greater than allowed or
+        # sticky bottom enabled => set to greatest allowed
+        if (
+                self.__cursor == -1 or
+                self.__cursor >= len(content) or
+                self.__stuck_to_bottom):
             self.__cursor = max(0, len(content) - 1)
-        else:
-            idx = min(
-                max(self.__log_idx, 0),
-                max(len(content) - height + 2, 0))
+            self.__log_idx = max_log_idx
+
+        # Draw cursor
+        content[self.__cursor] = self.__CURSOR + content[self.__cursor][2:]
 
         # Assemble contents
         body_len = len(content)
-        body = '\n'.join(content[idx: idx + height])
+        body = '\n'.join(content[self.__log_idx: self.__log_idx + height])
 
-        if body_len - idx < height:
-            body += '\n' * (height - body_len + idx)
+        if body_len - self.__log_idx < height:
+            body += '\n' * (height - body_len + self.__log_idx)
 
         body = header() + body + '\n' + footer()
 
@@ -107,7 +115,9 @@ class InteractiveTaskApp(Task):
 
         # Index
         if relative:
-            if self.__log_idx != 0 or new >= 0:
+            if (
+                    (self.__log_idx != 0 or new >= 0) and
+                    self.__cursor - self.__log_idx == 2):
                 self.__log_idx += new
             if self.__cursor != 0 or new >= 0:
                 self.__cursor += new
@@ -154,6 +164,5 @@ class InteractiveTaskApp(Task):
         """
 
         return '\n'.join([
-            (self.__NOCURSOR if idx != self.__cursor else self.__CURSOR) +
-            format_line(line)
+            self.__NOCURSOR + format_line(line)
             for idx, line in enumerate(ordered_tree(self.metadata()))])
