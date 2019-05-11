@@ -5,6 +5,7 @@ import json
 
 # Threading
 import threading
+import time
 
 # Queue
 from queue import Empty as EmptyException
@@ -85,6 +86,8 @@ class Accountant(threading.Thread):
         try:
             update = self.queue.get_nowait()
         except EmptyException:
+            # Insert delay to prevent CPU hogging
+            time.sleep(0.01)
             return
 
         self.task_log_mutex.acquire(True)
