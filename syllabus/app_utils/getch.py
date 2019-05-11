@@ -3,52 +3,48 @@
 Creates "getch" function, with different structure depending on the OS.
 """
 
+import os
+
 
 # -- Windows ------------------------------------------------------------------
-try:
+if os.name == 'nt':
+
     import msvcrt
-    getch = msvcrt.getch
 
-except ImportError:
+    def getch():
+        return msvcrt.getch() if msvcrt.kbhit() else ''
 
-    # -- OSX ------------------------------------------------------------------
-    try:
-        import Carbon
-        assert(hasattr(Carbon, 'Evt'))
 
-        def getch():
-            if Carbon.Evt.EventAvail(0x0008)[0] == 0:
-                return ''
-            else:
-                msg = Carbon.Evt.GetNextEvent(0x0008)[1][2]
+# -- Linux --------------------------------------------------------------------
+elif os.name == 'posix':
 
-                if ord(msg) == 3:
-                    raise KeyboardInterrupt
+    import sys
+    import tty
+    import termios
+    import os
 
-                return chr(msg & 0x000000FF)
+    # Set sys.stdin.read as non-blocking
+    os.set_blocking(sys.stdin.fileno(), False)
 
-    # -- Linux ----------------------------------------------------------------
-    except (AssertionError, ImportError, AttributeError):
+    # Create function
+    def getch():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-        import sys
-        import tty
-        import termios
-        import os
+        if len(ch) > 0 and ord(ch) == 3:
+            raise KeyboardInterrupt
 
-        # Set sys.stdin.read as non-blocking
-        os.set_blocking(sys.stdin.fileno(), False)
+        return ch
 
-        # Create function
-        def getch():
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            try:
-                tty.setraw(sys.stdin.fileno())
-                ch = sys.stdin.read(1)
-            finally:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-            if len(ch) > 0 and ord(ch) == 3:
-                raise KeyboardInterrupt
+# -- Other OS -----------------------------------------------------------------
+else:
 
-            return ch
+    raise Exception(
+        "Unsupported OS. Syllabus currently only supports keyboard input on "
+        "Windows and Linux.")

@@ -3,7 +3,9 @@
 
 import time
 import print as p
-from syllabus import Task, BasicTaskApp, InteractiveTaskApp
+from syllabus import NullTask, BasicTaskApp, InteractiveTaskApp
+
+REFRESH_RATE = 20
 
 
 def cheap_task(arg, task=None):
@@ -54,13 +56,16 @@ if __name__ == "__main__":
 
     if p.argparse.is_flag('i'):
         AppClass = InteractiveTaskApp
+    elif p.argparse.is_flag('n'):
+        AppClass = NullTask
     else:
         AppClass = BasicTaskApp
 
     if p.argparse.is_flag('m'):
         # Multiprocessing - must have mp=True enabled to use multiprocessing
         main2 = AppClass(
-            "MP-enabled Main Task", desc='mp=True', mp=True).start()
+            "MP-enabled Main Task", desc='mp=True', mp=True,
+            refresh_rate=REFRESH_RATE).start()
 
         main2.pool(expensive_proctask, [i for i in range(10)], process=True)
         main2.pool(
@@ -72,15 +77,27 @@ if __name__ == "__main__":
 
     elif p.argparse.is_flag('l'):
 
-        main = AppClass("Main Task", desc=' the main task', mp=False).start()
+        main = AppClass(
+            "Main Task", desc=' the main task', mp=False,
+            refresh_rate=REFRESH_RATE).start()
         for i in range(1000):
             expensive_task(i, task=main.subtask("Subtask #{i}".format(i=i)))
         main.done()
         main.save("tmp.json", pretty=True)
 
+    elif p.argparse.is_flag('f'):
+        main = AppClass(
+            "Main Task", desc="the main task", mp=False,
+            refresh_rate=REFRESH_RATE).start()
+        cheap_task(0, task=main.subtask("Cheap task"))
+        main.done()
+        main.save("tmp.json", pretty=True)
+
     else:
         # Initialize task; note the .start() called at the end
-        main = AppClass("Main Task", desc='the main task', mp=False).start()
+        main = AppClass(
+            "Main Task", desc='the main task', mp=False,
+            refresh_rate=REFRESH_RATE).start()
 
         # Single-threaded
         st1 = main.subtask("Task #1", desc='first subtask')

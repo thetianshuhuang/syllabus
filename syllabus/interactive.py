@@ -129,6 +129,8 @@ class InteractiveTaskApp(Task):
                 self.__stuck_to_bottom = True
                 self.__set_log_idx(-1, relative=False)
 
+            time.sleep(0.05)
+
     def render_tree(self):
         """Render task tree
 
@@ -139,5 +141,5 @@ class InteractiveTaskApp(Task):
         """
 
         return '\n'.join([
-            format_line(line)
+            '  ' + format_line(line)
             for line in ordered_tree(self.metadata())])
