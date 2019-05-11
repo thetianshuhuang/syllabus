@@ -3,10 +3,15 @@
 Creates "getch" function, with different structure depending on the OS.
 """
 
+
+# -- Windows ------------------------------------------------------------------
 try:
     import msvcrt
     getch = msvcrt.getch
+
 except ImportError:
+
+    # -- OSX ------------------------------------------------------------------
     try:
         import Carbon
         assert(hasattr(Carbon, 'Evt'))
@@ -22,12 +27,18 @@ except ImportError:
 
                 return chr(msg & 0x000000FF)
 
+    # -- Linux ----------------------------------------------------------------
     except (AssertionError, ImportError, AttributeError):
 
         import sys
         import tty
         import termios
+        import os
 
+        # Set sys.stdin.read as non-blocking
+        os.set_blocking(sys.stdin.fileno(), False)
+
+        # Create function
         def getch():
             fd = sys.stdin.fileno()
             old_settings = termios.tcgetattr(fd)
