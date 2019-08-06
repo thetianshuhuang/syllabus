@@ -11,7 +11,7 @@ Time and memory tracking task manager for Machine Learning applications
 ## Installation
 Install with
 ```shell
-pip install printtools
+pip install syllabus
 ```
 
 For the latest version, clone this repository and use
